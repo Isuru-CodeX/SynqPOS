@@ -117,9 +117,20 @@ export function ProductGrid({
               className="product-tile hue-tile text-left"
             >
               {/* Thumb */}
-              <div className={cn("tile-thumb hue-tile-thumb relative overflow-hidden", hue)}>
-                <div className="tile-hatch" />
-                <div className="tile-letter">{p.name.charAt(0).toUpperCase()}</div>
+              <div className={cn("tile-thumb hue-tile-thumb relative overflow-hidden group/thumb", hue)}>
+                {p.image_url ? (
+                  <img
+                    src={p.image_url}
+                    alt={p.name}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover/thumb:scale-105"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = "none";
+                    }}
+                  />
+                ) : null}
+                <div className={cn("tile-hatch", p.image_url && "hidden")} />
+                <div className={cn("tile-letter", p.image_url && "hidden")}>{p.name.charAt(0).toUpperCase()}</div>
                 {lowStock && (
                   <div className={cn("tile-low-stock", devMode && "!bg-orange-500/90")}>
                     {devMode ? "DEV" : (typeof stock === "number" ? `${Math.round(stock)}` : "")} STOCK

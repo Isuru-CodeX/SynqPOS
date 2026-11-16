@@ -6,6 +6,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Bell,
   CheckCheck,
   Trash2,
@@ -18,6 +25,9 @@ import {
   ExternalLink,
   BellOff,
   Sparkles,
+  Calendar,
+  Tag,
+  ArrowRight,
 } from "lucide-react";
 import { useNotificationsStore, type AppNotification, type NotificationCategory } from "@/stores/notifications";
 import { useI18n } from "@/lib/i18n";
@@ -61,6 +71,8 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "unread" | "alerts">("all");
 
+  const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
+
   const {
     notifications,
     markAsRead,
@@ -89,13 +101,11 @@ export function NotificationCenter() {
 
   const handleItemClick = (n: AppNotification) => {
     markAsRead(n.id);
-    if (n.actionUrl) {
-      setOpen(false);
-      navigate(n.actionUrl);
-    }
+    setSelectedNotification(n);
   };
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
@@ -326,5 +336,96 @@ export function NotificationCenter() {
         </div>
       </PopoverContent>
     </Popover>
+
+    {/* Notification Detail Dialog */}
+    <Dialog open={!!selectedNotification} onOpenChange={(o) => !o && setSelectedNotification(null)}>
+      <DialogContent className="sm:max-w-md p-6 glass border-purple-500/30 overflow-hidden">
+        {selectedNotification && (() => {
+          const cfg = CATEGORY_CONFIG[selectedNotification.category] || CATEGORY_CONFIG.system;
+          const Icon = cfg.icon;
+          const formattedDate = new Date(selectedNotification.timestamp).toLocaleString();
+          const timeAgo = formatDistanceToNow(new Date(selectedNotification.timestamp), { addSuffix: true });
+
+          return (
+            <div className="space-y-4">
+              <DialogHeader className="pb-3 border-b border-purple-500/20 text-left">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br", cfg.gradient)}>
+                    <Icon size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/20">
+                        {selectedNotification.category}
+                      </span>
+                      {selectedNotification.badge && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-muted text-muted-foreground">
+                          {selectedNotification.badge}
+                        </span>
+                      )}
+                    </div>
+                    <DialogTitle className="text-base font-bold text-foreground mt-1 leading-snug">
+                      {selectedNotification.title}
+                    </DialogTitle>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-3 py-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Calendar size={13} className="text-purple-400" />
+                  <span>{formattedDate} ({timeAgo})</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-purple-500/[0.04] border border-purple-500/15 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                  {selectedNotification.description}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-purple-500/20 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = selectedNotification.id;
+                    removeNotification(id);
+                    setSelectedNotification(null);
+                  }}
+                  className="g-btn g-btn-ghost text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 flex items-center gap-1"
+                >
+                  <Trash2 size={13} />
+                  {t("common.delete", "Delete")}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNotification(null)}
+                    className="g-btn g-btn-ghost text-xs h-8 px-3"
+                  >
+                    {t("common.close", "Close")}
+                  </button>
+                  {selectedNotification.actionUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = selectedNotification.actionUrl!;
+                        setSelectedNotification(null);
+                        setOpen(false);
+                        navigate(url);
+                      }}
+                      className="g-btn g-btn-primary text-xs h-8 px-3.5 flex items-center gap-1.5"
+                    >
+                      {t("notifications.go_to_module", "Open Module")}
+                      <ArrowRight size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

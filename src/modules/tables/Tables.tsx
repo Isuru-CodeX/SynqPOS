@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { deriveOrderState, ORDER_STATE_META, countByStatus } from "./itemStatus";
 import { Table } from "@/types/table";
+import { useTablesStore } from "@/stores/tables";
 import { useI18n } from "@/lib/i18n";
 import "./tables.css";
 
@@ -331,39 +332,56 @@ export default function Tables() {
 
   // ── Queries ──────────────────────────────────────────────────────────────────
 
+  const localTables = useTablesStore((s) => s.tables);
+  const localOrders = useTablesStore((s) => s.orders);
+
   const { data: tables } = useQuery({
-    queryKey: ["tables", tenantId, branchId],
+    queryKey: ["tables", tenantId, branchId, localTables],
     enabled: !!tenantId && !!branchId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tables")
-        .select("*")
-        .eq("tenant_id", tenantId!)
-        .eq("branch_id", branchId!)
-        .neq("status", "inactive");
-      if (error) throw error;
-      const num = (s: string) =>
-        parseInt(s.replace(/\D+/g, "") || "0", 10);
-      return ((data ?? []) as Table[]).sort(
-        (a, b) =>
-          num(a.name) - num(b.name) || a.name.localeCompare(b.name),
-      );
+      const num = (s: string) => parseInt(s.replace(/\D+/g, "") || "0", 10);
+      try {
+        const { data, error } = await supabase
+          .from("tables")
+          .select("*")
+          .eq("tenant_id", tenantId!)
+          .eq("branch_id", branchId!)
+          .neq("status", "inactive");
+        if (error) throw error;
+        if (data && data.length > 0) {
+          return ((data ?? []) as Table[]).sort(
+            (a, b) => num(a.name) - num(b.name) || a.name.localeCompare(b.name),
+          );
+        }
+      } catch (err) {
+        console.warn("[Tables] Supabase query failed, falling back to local tables store:", err);
+      }
+      return localTables
+        .filter((t) => t.status !== "inactive")
+        .sort((a, b) => num(a.name) - num(b.name) || a.name.localeCompare(b.name));
     },
   });
 
   const { data: openOrders } = useQuery({
-    queryKey: ["table-orders-open", tenantId, branchId],
+    queryKey: ["table-orders-open", tenantId, branchId, localOrders],
     enabled: !!tenantId && !!branchId,
     refetchInterval: 15000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("table_orders")
-        .select("*, table_order_items(id, status)")
-        .eq("tenant_id", tenantId!)
-        .eq("branch_id", branchId!)
-        .in("status", ["open", "sent_to_cashier"]);
-      if (error) throw error;
-      return data as unknown as TableOrder[];
+      try {
+        const { data, error } = await supabase
+          .from("table_orders")
+          .select("*, table_order_items(id, status)")
+          .eq("tenant_id", tenantId!)
+          .eq("branch_id", branchId!)
+          .in("status", ["open", "sent_to_cashier"]);
+        if (error) throw error;
+        if (data && data.length > 0) return data as unknown as TableOrder[];
+      } catch (err) {
+        console.warn("[Tables] Orders query failed, falling back to local orders store:", err);
+      }
+      return localOrders.filter(
+        (o) => o.status === "open" || o.status === "sent_to_cashier"
+      ) as unknown as TableOrder[];
     },
   });
 

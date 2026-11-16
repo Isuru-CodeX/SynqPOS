@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantStore } from "@/stores/tenant";
+import { useBranchesStore } from "@/stores/branches";
 import { useAuth } from "./useAuth";
 import { Branch } from "@/types/branch";
 import { useEffect, useMemo } from "react";
@@ -79,8 +80,10 @@ export function useTenantContext() {
     },
   });
 
+  const localBranches = useBranchesStore((s) => s.branches);
+
   const { data: branches } = useQuery({
-    queryKey: ["branches", tenantId],
+    queryKey: ["branches", tenantId, localBranches.length],
     enabled: !!tenantId,
     queryFn: async () => {
       try {
@@ -95,7 +98,8 @@ export function useTenantContext() {
       } catch (err) {
         console.warn("[useTenantContext] Remote branches query unavailable, applying fallback:", err);
       }
-      return DEFAULT_FALLBACK_BRANCHES;
+      const activeLocal = localBranches.filter((b) => b.status === "active");
+      return activeLocal.length > 0 ? activeLocal : DEFAULT_FALLBACK_BRANCHES;
     },
   });
 

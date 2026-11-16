@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryCenters } from "@/hooks/useInventoryCenters";
+import { useInventoryStore } from "@/stores/inventory";
+import { db } from "@/lib/db";
 import { useI18n } from "@/lib/i18n";
 import { InventoryCenters } from "./components/InventoryCenters";
 import { InvoiceOCRDialog } from "./components/InvoiceOCRDialog";
@@ -89,17 +91,26 @@ export default function Inventory() {
 
   const activeCenterId = selectedCenterId === "all" ? undefined : selectedCenterId;
 
+  const localStocks = useInventoryStore((s) => s.stocks);
+  const localMovements = useInventoryStore((s) => s.movements);
+
   const { data: stocks } = useQuery({
-    queryKey: ["stocks", branchId, activeCenterId],
+    queryKey: ["stocks", branchId, activeCenterId, localStocks],
     enabled: !!branchId,
     queryFn: async () => {
-      let query = supabase.from("inventory_stocks")
-        .select("*, products(id, name, min_stock, unit_code, status, sku), inventory_centers(name)")
-        .eq("branch_id", branchId!);
-      if (activeCenterId) {
-        query = (query as any).eq("inventory_center_id", activeCenterId);
+      try {
+        let query = supabase.from("inventory_stocks")
+          .select("*, products(id, name, min_stock, unit_code, status, sku), inventory_centers(name)")
+          .eq("branch_id", branchId!);
+        if (activeCenterId) {
+          query = (query as any).eq("inventory_center_id", activeCenterId);
+        }
+        const res = await query.order("product_id");
+        if (res.data && res.data.length > 0) return res.data;
+      } catch (err) {
+        console.warn("[Inventory] Remote stocks query failed, falling back to local inventory store:", err);
       }
-      return (await query.order("product_id")).data ?? [];
+      return localStocks;
     },
   });
 
@@ -107,28 +118,48 @@ export default function Inventory() {
     queryKey: ["inventory-catalog-products", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name, min_stock, unit_code, status, sku, barcode")
-        .eq("tenant_id", tenantId!)
-        .eq("status", "active")
-        .order("name");
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, name, min_stock, unit_code, status, sku, barcode")
+          .eq("tenant_id", tenantId!)
+          .eq("status", "active")
+          .order("name");
+        if (error) throw error;
+        if (data && data.length > 0) return data;
+      } catch (err) {
+        console.warn("[Inventory] Products query failed, falling back to local db:", err);
+      }
+      const cached = await db.products.where("tenant_id").equals(tenantId!).toArray();
+      return cached.map(p => ({
+        id: p.id,
+        name: p.name,
+        min_stock: 10,
+        unit_code: "units",
+        status: p.status,
+        sku: p.sku ?? "",
+        barcode: p.barcode ?? "",
+      }));
     },
   });
 
   const { data: movements } = useQuery({
-    queryKey: ["movements", branchId, activeCenterId],
+    queryKey: ["movements", branchId, activeCenterId, localMovements],
     enabled: !!branchId,
     queryFn: async () => {
-      let query = supabase.from("inventory_movements")
-        .select("*, products(name), inventory_centers(name)")
-        .eq("branch_id", branchId!);
-      if (activeCenterId) {
-        query = (query as any).eq("inventory_center_id", activeCenterId);
+      try {
+        let query = supabase.from("inventory_movements")
+          .select("*, products(name), inventory_centers(name)")
+          .eq("branch_id", branchId!);
+        if (activeCenterId) {
+          query = (query as any).eq("inventory_center_id", activeCenterId);
+        }
+        const res = await query.order("created_at", { ascending: false }).limit(100);
+        if (res.data && res.data.length > 0) return res.data;
+      } catch (err) {
+        console.warn("[Inventory] Movements query failed, falling back to local movements:", err);
       }
-      return (await query.order("created_at", { ascending: false }).limit(100)).data ?? [];
+      return localMovements;
     },
   });
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useTablesStore } from "@/stores/tables";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,13 +40,23 @@ export default function TablesSettings() {
     },
   });
 
+  const localTables = useTablesStore((s) => s.tables);
+  const addTableStore = useTablesStore((s) => s.addTable);
+  const updateTableStore = useTablesStore((s) => s.updateTable);
+  const deleteTableStore = useTablesStore((s) => s.deleteTable);
+
   const { data: tables } = useQuery({
-    queryKey: ["tables-settings", tenantId],
+    queryKey: ["tables-settings", tenantId, localTables],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("tables").select("*").eq("tenant_id", tenantId!).order("name");
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await supabase.from("tables").select("*").eq("tenant_id", tenantId!).order("name");
+        if (error) throw error;
+        if (data && data.length > 0) return data;
+      } catch (err) {
+        console.warn("[TablesSettings] Supabase tables query failed, falling back to local tables store:", err);
+      }
+      return localTables;
     },
   });
 
@@ -74,14 +85,25 @@ export default function TablesSettings() {
       assigned_waiter_id: waiterId || null,
     };
     if (editing) {
-      const { error } = await supabase.from("tables").update(payload).eq("id", editing.id);
-      if (error) return toast.error(error.message);
+      updateTableStore(editing.id, payload);
+      try {
+        await supabase.from("tables").update(payload).eq("id", editing.id);
+      } catch {}
     } else {
-      const { error } = await supabase.from("tables").insert({
-        tenant_id: tenantId, ...payload,
+      const newTbl = addTableStore({
+        tenant_id: tenantId,
+        ...payload,
+        status: "available",
         sort_order: (tables?.length ?? 0) + 1,
       });
-      if (error) return toast.error(error.message);
+      try {
+        await supabase.from("tables").insert({
+          id: newTbl.id,
+          tenant_id: tenantId,
+          ...payload,
+          sort_order: (tables?.length ?? 0) + 1,
+        });
+      } catch {}
     }
     toast.success(t("tables.saved", "Table saved successfully"));
     setOpen(false);
@@ -91,8 +113,11 @@ export default function TablesSettings() {
 
   const remove = async (id: string) => {
     if (!confirm(t("tables.delete_confirm", "Delete this table?"))) return;
-    const { error } = await supabase.from("tables").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    deleteTableStore(id);
+    try {
+      await supabase.from("tables").delete().eq("id", id);
+    } catch {}
+    toast.success(t("tables.deleted", "Table deleted"));
     qc.invalidateQueries({ queryKey: ["tables-settings"] });
     qc.invalidateQueries({ queryKey: ["tables"] });
   };

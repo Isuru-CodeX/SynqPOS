@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useBranchesStore } from "@/stores/branches";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,17 +25,28 @@ export default function Branches() {
   const [form, setForm] = useState({ name: "", address: "", phone: "" });
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  const localBranches = useBranchesStore((s) => s.branches);
+  const addBranchStore = useBranchesStore((s) => s.addBranch);
+  const updateBranchStore = useBranchesStore((s) => s.updateBranch);
+  const deleteBranchStore = useBranchesStore((s) => s.deleteBranch);
+  const toggleBranchStatusStore = useBranchesStore((s) => s.toggleBranchStatus);
+
   const { data: branches, isLoading } = useQuery({
-    queryKey: ["branches-admin", tenantId],
+    queryKey: ["branches-admin", tenantId, localBranches],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("branches")
-        .select("id, name, address, phone, status, tenant_id, table_view_mode")
-        .eq("tenant_id", tenantId!)
-        .order("name");
-      if (error) throw error;
-      return (data ?? []) as Branch[];
+      try {
+        const { data, error } = await supabase
+          .from("branches")
+          .select("id, name, address, phone, status, tenant_id, table_view_mode")
+          .eq("tenant_id", tenantId!)
+          .order("name");
+        if (error) throw error;
+        if (data && data.length > 0) return data as Branch[];
+      } catch (err) {
+        console.warn("[Branches] Remote query failed, using local store:", err);
+      }
+      return localBranches;
     },
   });
 
@@ -55,27 +67,40 @@ export default function Branches() {
     if (!form.name.trim()) return toast.error(t("branches.name_required", "Branch name is required"));
     try {
       if (editing) {
-        const { error } = await supabase
-          .from("branches")
-          .update({ name: form.name, address: form.address || null, phone: form.phone || null })
-          .eq("id", editing.id);
-        if (error) throw error;
+        updateBranchStore(editing.id, {
+          name: form.name,
+          address: form.address || null,
+          phone: form.phone || null,
+        });
+        try {
+          await supabase
+            .from("branches")
+            .update({ name: form.name, address: form.address || null, phone: form.phone || null })
+            .eq("id", editing.id);
+        } catch {}
         toast.success(t("branches.updated", "Branch updated successfully"));
       } else {
-        const { data: branch, error } = await supabase
-          .from("branches")
-          .insert({
-            tenant_id: tenantId,
-            name: form.name,
-            address: form.address || null,
-            phone: form.phone || null,
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        await supabase
-          .from("cash_registers")
-          .insert({ tenant_id: tenantId, branch_id: branch.id, name: "Register 1" });
+        const newBranch = addBranchStore({
+          tenant_id: tenantId,
+          name: form.name,
+          address: form.address || null,
+          phone: form.phone || null,
+          status: "active",
+        });
+        try {
+          await supabase
+            .from("branches")
+            .insert({
+              id: newBranch.id,
+              tenant_id: tenantId,
+              name: form.name,
+              address: form.address || null,
+              phone: form.phone || null,
+            });
+          await supabase
+            .from("cash_registers")
+            .insert({ tenant_id: tenantId, branch_id: newBranch.id, name: "Register 1" });
+        } catch {}
         toast.success(t("branches.created", "Branch created successfully"));
       }
       qc.invalidateQueries({ queryKey: ["branches-admin"] });
@@ -88,8 +113,10 @@ export default function Branches() {
 
   const toggleStatus = async (b: Branch) => {
     const next = b.status === "active" ? "inactive" : "active";
-    const { error } = await supabase.from("branches").update({ status: next }).eq("id", b.id);
-    if (error) return toast.error(error.message);
+    toggleBranchStatusStore(b.id);
+    try {
+      await supabase.from("branches").update({ status: next }).eq("id", b.id);
+    } catch {}
     toast.success(next === "active" ? t("branches.activated", "Branch activated") : t("branches.deactivated", "Branch deactivated"));
     qc.invalidateQueries({ queryKey: ["branches-admin"] });
     qc.invalidateQueries({ queryKey: ["branches"] });
@@ -109,9 +136,11 @@ export default function Branches() {
 
     setDeleting(b.id);
     try {
-      await supabase.from("cash_registers").delete().eq("branch_id", b.id);
-      const { error } = await supabase.from("branches").delete().eq("id", b.id);
-      if (error) throw error;
+      deleteBranchStore(b.id);
+      try {
+        await supabase.from("cash_registers").delete().eq("branch_id", b.id);
+        await supabase.from("branches").delete().eq("id", b.id);
+      } catch {}
       toast.success(t("branches.deleted", `Branch "${b.name}" deleted`));
       qc.invalidateQueries({ queryKey: ["branches-admin"] });
       qc.invalidateQueries({ queryKey: ["branches"] });

@@ -90,6 +90,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Double shot of rich espresso with golden crema.",
+    image_url: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-latte",
@@ -103,6 +104,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Steamed whole milk poured over fresh double espresso.",
+    image_url: "https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-caramel-macchiato",
@@ -116,6 +118,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Vanilla syrup, cold milk, espresso, and butter caramel drizzle.",
+    image_url: "https://images.unsplash.com/photo-1485808191679-5f86510681a2?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-matcha-latte",
@@ -129,6 +132,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Ceremonial Japanese matcha whisked with steamed oat milk.",
+    image_url: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-hot-chocolate",
@@ -142,6 +146,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Melted Belgian 70% dark chocolate and silky milk foam.",
+    image_url: "https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?auto=format&fit=crop&w=400&q=80",
   },
 
   // Bakery & Bread
@@ -157,6 +162,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Flaky, multi-layered French butter croissant baked fresh daily.",
+    image_url: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-almond-croissant",
@@ -170,6 +176,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Sweet almond frangipane cream, dark chocolate chips and toasted almonds.",
+    image_url: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-blueberry-muffin",
@@ -183,6 +190,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Loaded with fresh wild blueberries and cinnamon brown sugar crumble.",
+    image_url: "https://images.unsplash.com/photo-1607958996333-41aef7caefaa?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-cinnamon-brioche",
@@ -196,6 +204,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Warm brioche swirled with Ceylon cinnamon and cream cheese glaze.",
+    image_url: "https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-sourdough-loaf",
@@ -209,6 +218,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Naturally fermented 36-hour sourdough loaf with crispy blistered crust.",
+    image_url: "https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?auto=format&fit=crop&w=400&q=80",
   },
 
   // Sandwiches & Meals
@@ -224,6 +234,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Marinated chicken breast, basil pesto, fresh mozzarella and sun-dried tomatoes.",
+    image_url: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-salmon-bagel",
@@ -237,6 +248,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Atlantic cold-smoked salmon, dill cream cheese, capers, red onion on toasted bagel.",
+    image_url: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-quinoa-bowl",
@@ -250,6 +262,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Organic tricolor quinoa, cucumber, cherry tomatoes, kalamata olives and Greek feta.",
+    image_url: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-truffle-baguette",
@@ -263,6 +276,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Prosciutto di Parma, black truffle butter, arugula and shaved aged parmesan.",
+    image_url: "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=400&q=80",
   },
 
   // Cold Drinks
@@ -278,6 +292,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Fresh celery, green apple, cucumber, kale, ginger and lemon.",
+    image_url: "https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-lemon-soda",
@@ -291,6 +306,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "San Pellegrino sparkling water with freshly squeezed Sicilian lemon and mint leaves.",
+    image_url: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-acai-smoothie",
@@ -304,6 +320,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "bar",
     description: "Organic acai, blackberries, banana, almond butter and coconut water.",
+    image_url: "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=400&q=80",
   },
 
   // Desserts & Cakes
@@ -319,6 +336,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Decadent triple layer dark cocoa sponge cake filled with silk chocolate ganache.",
+    image_url: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-cheesecake",
@@ -332,6 +350,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Classic creamy baked cheesecake on buttery graham cracker crust with strawberry coulis.",
+    image_url: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "prod-macarons",
@@ -345,6 +364,7 @@ export const INITIAL_PRODUCTS = [
     product_type: "simple",
     station: "kitchen",
     description: "Assorted Parisian macarons: Pistachio, Raspberry, Salted Caramel and Madagascar Vanilla.",
+    image_url: "https://images.unsplash.com/photo-1569864358642-9d1684040f43?auto=format&fit=crop&w=400&q=80",
   },
 ];
 
@@ -356,7 +376,10 @@ export async function seedInitialDemoData(tenantId: string = "demo-tenant-synqpo
   try {
     const existingCount = await db.products.where("tenant_id").equals(tenantId).count();
     if (existingCount > 0) {
-      return;
+      const sample = await db.products.where("tenant_id").equals(tenantId).first();
+      if (sample && sample.image_url) {
+        return;
+      }
     }
 
     const now = new Date().toISOString();
@@ -382,7 +405,7 @@ export async function seedInitialDemoData(tenantId: string = "demo-tenant-synqpo
       price: prod.price,
       tax_rate: prod.tax_rate,
       category_id: prod.category_id,
-      image_url: null,
+      image_url: prod.image_url ?? null,
       sku: prod.sku,
       barcode: prod.barcode,
       status: "active",

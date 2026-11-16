@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,17 +43,36 @@ export default function Products() {
     queryKey: ["products", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*, categories(name)")
-        .eq("tenant_id", tenantId!).order("name");
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase.from("products").select("*, categories(name)")
+          .eq("tenant_id", tenantId!).order("name");
+        if (error) throw error;
+        if (data && data.length > 0) return data;
+      } catch (err) {
+        console.warn("[Products] Supabase products query failed, falling back to local db:", err);
+      }
+      const cached = await db.products.where("tenant_id").equals(tenantId!).toArray();
+      const cats = await db.categories.where("tenant_id").equals(tenantId!).toArray();
+      const catMap = new Map(cats.map(c => [c.id, c.name]));
+      return cached.map(p => ({
+        ...p,
+        categories: p.category_id ? { name: catMap.get(p.category_id) ?? null } : null,
+      }));
     },
   });
 
   const { data: categories } = useQuery({
     queryKey: ["categories-list", tenantId],
     enabled: !!tenantId,
-    queryFn: async () => (await supabase.from("categories").select("id, name").eq("tenant_id", tenantId!).order("name")).data ?? [],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.from("categories").select("id, name").eq("tenant_id", tenantId!).order("name");
+        if (data && data.length > 0) return data;
+      } catch (err) {
+        console.warn("[Products] Categories query failed, falling back to local db:", err);
+      }
+      return await db.categories.where("tenant_id").equals(tenantId!).toArray();
+    },
   });
 
   const filtered = (products ?? []).filter((p: any) => {
@@ -305,7 +325,33 @@ export default function Products() {
           <TableBody>
             {filtered.map((p: any) => (
               <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-purple-500/10 border border-purple-500/20 flex-shrink-0 flex items-center justify-center">
+                      {p.image_url ? (
+                        <img
+                          src={p.image_url}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <span className="font-bold text-sm text-purple-400">
+                          {p.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-ink-900">{p.name}</div>
+                      {p.description && (
+                        <div className="truncate text-xs text-ink-400 max-w-xs">{p.description}</div>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
                 <TableCell className="text-ink-500">{p.categories?.name ?? "—"}</TableCell>
                 <TableCell>
                   <span className="pill pill-ghost">{t(`products.types.${p.product_type}`, TYPE_LABELS[p.product_type] || p.product_type)}</span>
