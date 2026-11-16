@@ -63,6 +63,10 @@ const App = () => {
   useSyncEngine();
   useAutoUpdater();
 
+  useEffect(() => {
+    seedInitialDemoData("demo-tenant-synqpos");
+  }, []);
+
   // PWA lifecycle feedback
   useEffect(() => {
     const onReady = () => toast.success("SynqPOS is ready for offline use ✓", { duration: 4000 });
