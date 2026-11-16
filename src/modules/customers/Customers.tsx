@@ -9,6 +9,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Users, Plus, Pencil, Trash2, Search, Phone, Mail, Heart } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 
 type Customer = {
   id: string;
@@ -27,6 +28,7 @@ const empty: FormData = { name: "", phone: "", email: "", document_number: "", a
 
 export default function Customers() {
   const { tenantId } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -106,16 +108,16 @@ export default function Customers() {
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <div className="h-meta g-page-subtitle text-ink-400">OPERACIÓN · CLIENTES</div>
-            <h1 className="h-display g-page-title">Clientes</h1>
+            <div className="h-meta g-page-subtitle text-ink-400">{t("nav.operation", "Operation").toUpperCase()} · {t("nav.customers", "Customers").toUpperCase()}</div>
+            <h1 className="h-display g-page-title">{t("customers.title", "Customers")}</h1>
             <div className="h-meta g-page-subtitle text-ink-500">
-              {customers.length} cliente{customers.length !== 1 ? "s" : ""} registrado{customers.length !== 1 ? "s" : ""}
+              {customers.length} {t("customers.registered", "registered customer(s)")}
             </div>
           </div>
         </div>
         <button type="button" className="g-btn g-btn-primary" onClick={openCreate}>
           <Plus className="h-4 w-4" />
-          Nuevo cliente
+          {t("customers.new_customer", "New Customer")}
         </button>
       </div>
 
@@ -124,7 +126,7 @@ export default function Customers() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
         <Input
           className="pl-9"
-          placeholder="Buscar por nombre, teléfono, NIT..."
+          placeholder={t("customers.search_placeholder", "Search by name, phone, document...")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

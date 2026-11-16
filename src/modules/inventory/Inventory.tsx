@@ -364,7 +364,7 @@ export default function Inventory() {
         <div className="flex items-center gap-2">
           <span className="h-label hidden md:block">Centro:</span>
           <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
-            <SelectTrigger className="h-8 text-xs bg-white/60 border-white/70 inv-select-trigger">
+            <SelectTrigger className="h-8 text-xs inv-select-trigger">
               <SelectValue placeholder="Todos los centros" />
             </SelectTrigger>
             <SelectContent>

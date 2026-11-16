@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, Boxes, ChefHat, Factory,
@@ -15,6 +15,7 @@ import { useWhatsAppNotifs } from "@/contexts/WhatsAppNotifsContext";
 import { useThemeStore } from "@/stores/theme";
 import { useI18n } from "@/lib/i18n";
 import { SynqLogo } from "@/components/shared/SynqLogo";
+import { PlanBenefitsModal } from "@/components/shared/PlanBenefitsModal";
 import { cn } from "@/lib/utils";
 import { signOutFully } from "@/lib/signOut";
 import type { LucideIcon } from "lucide-react";
@@ -90,6 +91,7 @@ export function AppSidebar() {
   const { mode, toggleMode } = useThemeStore();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [planModalOpen, setPlanModalOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "—";
@@ -192,7 +194,7 @@ export function AppSidebar() {
                 <button
                   type="button"
                   className="g-sb-plan-btn"
-                  onClick={() => navigate("/settings")}
+                  onClick={() => setPlanModalOpen(true)}
                 >
                   {t("nav.view_benefits", "View benefits")} <ChevronRight size={12} />
                 </button>
@@ -237,6 +239,7 @@ export function AppSidebar() {
 
           </div>
         </div>
+        <PlanBenefitsModal open={planModalOpen} onOpenChange={setPlanModalOpen} />
       </SidebarContent>
     </Sidebar>
   );

@@ -107,8 +107,7 @@ export default function LocalizationSettings() {
                   "p-2.5 rounded-xl border-2 transition-all text-left flex flex-col justify-between h-20",
                   isSelected
                     ? "border-primary bg-primary/10 shadow-sm"
-                    : "border-border bg-card hover:bg-muted/30 hover:border-muted-foreground/30",
-                  curr.code === "LKR" && !isSelected && "border-primary/40 bg-primary/5"
+                    : "border-border bg-card hover:bg-muted/30 hover:border-muted-foreground/30"
                 )}
               >
                 <div className="flex items-center justify-between w-full">
@@ -122,9 +121,6 @@ export default function LocalizationSettings() {
                 <div>
                   <div className="text-xs font-semibold text-foreground flex items-center gap-1">
                     {curr.code}
-                    {curr.code === "LKR" && (
-                      <span className="text-[9px] px-1 rounded bg-primary/20 text-primary font-bold">LKR</span>
-                    )}
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate">{curr.name}</div>
                 </div>

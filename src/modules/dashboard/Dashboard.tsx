@@ -456,7 +456,7 @@ export default function Dashboard() {
                   <BarChart3 size={16} className="text-muted-foreground shrink-0" />
                   <span className="text-[13px] font-semibold text-foreground truncate max-w-[100px]">{b.name}</span>
                 </div>
-                <span className={cn("g-pill g-pill-h18", i === 0 ? "g-pill-ok" : "g-pill-ghost")}>
+                <span className={cn("g-pill g-pill-h18", i === 0 ? "g-pill-ok" : "g-pill-active")}>
                   {i === 0 ? t("dashboard.branch_online", "Online") : t("dashboard.branch_active", "Active")}
                 </span>
               </div>
