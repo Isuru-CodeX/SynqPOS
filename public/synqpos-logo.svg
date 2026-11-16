@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" width="760" height="180">
+  <defs>
+    <!-- Gemini signature cosmic gradient -->
+    <linearGradient id="gemini-text-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="30%" stop-color="#818CF8" />
+      <stop offset="70%" stop-color="#C084FC" />
+      <stop offset="100%" stop-color="#F43F5E" />
+    </linearGradient>
+
+    <linearGradient id="gemini-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="35%" stop-color="#4F46E5" />
+      <stop offset="70%" stop-color="#9333EA" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+
+    <!-- Subtle glow filter -->
+    <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Left Icon Mark -->
+  <g transform="translate(18, 14)">
+    <!-- Base Icon Container (Cosmic Glass) -->
+    <rect width="152" height="152" rx="42" fill="#0B0F19" />
+    <rect width="152" height="152" rx="42" fill="none" stroke="url(#gemini-text-grad)" stroke-width="2.5" opacity="0.8" />
+
+    <!-- Gemini Sparkle Star -->
+    <g transform="translate(76, 76) scale(0.38) translate(-256, -256)" filter="url(#logo-glow)">
+      <path d="M 256 70
+               C 256 180, 290 220, 430 256
+               C 290 292, 256 332, 256 442
+               C 256 332, 222 292, 82 256
+               C 222 220, 256 180, 256 70 Z"
+            fill="url(#gemini-grad)" />
+      <circle cx="256" cy="256" r="32" fill="#FFFFFF" opacity="0.9" />
+
+      <!-- Satellite Synq Pulse Star -->
+      <g transform="translate(125, -125)">
+        <path d="M 256 180
+                 C 256 225, 270 240, 325 256
+                 C 270 272, 256 287, 256 332
+                 C 256 287, 242 272, 187 256
+                 C 242 240, 256 225, 256 180 Z"
+              fill="#38BDF8" />
+        <circle cx="256" cy="256" r="14" fill="#FFFFFF" />
+      </g>
+    </g>
+  </g>
+
+  <!-- Right Typography: "SynqPOS" -->
+  <g transform="translate(196, 0)">
+    <!-- "Synq" -->
+    <text x="0" y="106"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', sans-serif"
+          font-size="82"
+          font-weight="900"
+          letter-spacing="-1.5"
+          fill="#FFFFFF">Synq</text>
+
+    <!-- "POS" in Gemini Gradient -->
+    <text x="210" y="106"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', sans-serif"
+          font-size="82"
+          font-weight="900"
+          letter-spacing="-1.5"
+          fill="url(#gemini-text-grad)">POS</text>
+
+    <!-- Top Gemini Accent Sparkle on POS -->
+    <g transform="translate(405, 38) scale(0.32)">
+      <path d="M 50 0 C 50 35, 65 50, 100 50 C 65 50, 50 65, 50 100 C 50 65, 35 50, 0 50 C 35 50, 50 35, 50 0 Z"
+            fill="#38BDF8" />
+    </g>
+
+    <!-- Subtitle -->
+    <text x="4" y="146"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Plus Jakarta Sans', sans-serif"
+          font-size="16"
+          font-weight="700"
+          letter-spacing="5.5"
+          fill="#94A3B8">AI OMNICHANNEL SYSTEM</text>
+  </g>
+</svg>
