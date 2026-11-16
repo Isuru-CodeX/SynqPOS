@@ -18,7 +18,7 @@ import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/format";
 import { Search, Wallet, LockKeyhole, UtensilsCrossed, UserRound, X, Heart, ScanLine, Minus, Plus, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
-import { CHANNELS, resolvePrice, type SalesChannel } from "@/lib/channels";
+import { CHANNELS, resolvePrice, getChannelLabel, type SalesChannel } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import { ModifierSelector, validateModifiers, type SelectedModifier } from "@/components/shared/ModifierSelector";
 import { isCategoryActive } from "@/lib/categories";
@@ -332,9 +332,9 @@ export default function POS() {
       );
       if (product) {
         handleAddProduct(product);
-        toast.success(`${product.name} añadido`, { duration: 1500 });
+        toast.success(t("pos.item_added", `${product.name} added`), { duration: 1500 });
       } else {
-        toast.error(`Código "${code}" no encontrado`, { duration: 2500 });
+        toast.error(t("pos.code_not_found", `Code "${code}" not found`), { duration: 2500 });
       }
     });
   }, [onBarcodeScanned, priced, handleAddProduct]);
@@ -546,7 +546,7 @@ export default function POS() {
             onClick={() => setChannel(c.id)}
             className={cn("chan-chip", channel === c.id && "is-active")}
           >
-            {c.label}
+            {getChannelLabel(c.id)}
           </button>
         ))}
 
@@ -717,9 +717,9 @@ export default function POS() {
                     ref={zoomInputRef}
                     type="range" min={1} max={3} step={1} value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))}
-                    aria-label="Tamaño de productos"
+                    aria-label={t("pos.product_size", "Product card size")}
                   />
-                  <button type="button" aria-label="Ampliar" onClick={() => setZoom((z) => Math.min(3, z + 1))}>
+                  <button type="button" aria-label={t("pos.zoom_in", "Zoom in")} onClick={() => setZoom((z) => Math.min(3, z + 1))}>
                     <Plus className="h-3 w-3" />
                   </button>
                   <Search className="h-3 w-3 ml-1 text-muted-foreground" />
@@ -764,7 +764,7 @@ export default function POS() {
       <Dialog open={!!upsellProduct && upsellItems.length > 0} onOpenChange={open => { if (!open) { setUpsellProduct(null); setUpsellItems([]); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-base">¿Agregar algo más?</DialogTitle>
+            <DialogTitle className="text-base">{t("pos.cross_sell_title", "Add anything else?")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             {upsellItems.map((p: any) => (

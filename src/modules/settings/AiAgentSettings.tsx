@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,21 +18,20 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 
-const DEFAULT_PROMPT = `Eres el asistente de pedidos por WhatsApp de este negocio. Tu trabajo es ayudar a los clientes a hacer su pedido de manera rápida y clara.
+const DEFAULT_PROMPT = `You are the WhatsApp ordering assistant for this business. Your job is to help customers place their orders quickly and clearly.
 
-Reglas:
-- Responde siempre en español, de forma breve y amigable.
-- Usa search_catalog para buscar productos antes de cotizar o confirmar.
-- Usa quote_order para mostrar el resumen del pedido antes de crearlo.
-- Usa create_order solo cuando el cliente confirme (diga "sí", "confirmar", "listo", "dale", "ok" o similar).
-- Si no puedes resolver algo, usa handoff_to_human.
-- Los precios están en pesos colombianos (COP).
-- No inventes productos ni precios; siempre consulta el catálogo.
-- Si el cliente pide varios productos, agrégalos todos al mismo pedido.`;
+Rules:
+- Always respond in a friendly, concise, and helpful tone.
+- Use search_catalog to find products before quoting or confirming.
+- Use quote_order to show the order summary before creating it.
+- Use create_order only when the customer confirms (says "yes", "confirm", "ready", "ok" or similar).
+- If you cannot resolve something, use handoff_to_human.
+- Do not invent products or prices; always consult the catalog.
+- If the customer orders multiple items, add them all to the same order.`;
 
 const MODELS = [
-  { value: "anthropic/claude-3.5-haiku", label: "Claude 3.5 Haiku (rápido, económico)" },
-  { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (más inteligente)" },
+  { value: "anthropic/claude-3.5-haiku", label: "Claude 3.5 Haiku (fast, cost-effective)" },
+  { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (smartest)" },
   { value: "openai/gpt-4o-mini", label: "GPT-4o Mini" },
   { value: "openai/gpt-4o", label: "GPT-4o" },
   { value: "google/gemini-flash-1.5", label: "Gemini 1.5 Flash" },
@@ -48,6 +48,7 @@ type KnowledgeDoc = {
 
 export default function AiAgentSettings() {
   const { tenantId, branchId, branches } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [selectedBranch, setSelectedBranch] = useState(branchId ?? "");
 
@@ -136,7 +137,7 @@ export default function AiAgentSettings() {
         ? await supabase.from("ai_channel_configs").update(payload).eq("id", config.id)
         : await supabase.from("ai_channel_configs").insert(payload);
       if (error) throw error;
-      toast.success("Configuración del agente guardada");
+      toast.success(t("ai_settings.config_saved", "AI agent configuration saved"));
       qc.invalidateQueries({ queryKey: ["ai-agent-config"] });
     } catch (e: any) {
       toast.error(e.message);
@@ -147,11 +148,12 @@ export default function AiAgentSettings() {
 
   // ── Add knowledge document ───────────────────────────────────
   const addDoc = async () => {
-    if (!newDocTitle.trim() || !newDocContent.trim()) return toast.error("Ingresa título y contenido");
+    if (!newDocTitle.trim() || !newDocContent.trim()) {
+      return toast.error(t("ai_settings.title_content_required", "Enter title and content"));
+    }
     if (!tenantId || !selectedBranch) return;
     setSavingDoc(true);
     try {
-      // Insert doc without embedding first
       const { data: inserted, error: insErr } = await supabase
         .from("ai_knowledge_docs")
         .insert({
@@ -162,15 +164,14 @@ export default function AiAgentSettings() {
         })
         .select("id")
         .single();
-      if (insErr || !inserted) throw insErr ?? new Error("No se pudo guardar el documento");
+      if (insErr || !inserted) throw insErr ?? new Error("Could not save document");
 
-      toast.success("Documento guardado. Generando embedding…");
+      toast.success(t("ai_settings.doc_saved_embedding", "Document saved. Generating embedding..."));
       setAddDocOpen(false);
       setNewDocTitle("");
       setNewDocContent("");
       qc.invalidateQueries({ queryKey: ["ai-knowledge-docs"] });
 
-      // Trigger embedding generation
       setEmbeddingId(inserted.id);
       await generateEmbedding(inserted.id);
     } catch (e: any) {
@@ -198,10 +199,10 @@ export default function AiAgentSettings() {
       );
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Embedding failed");
-      toast.success(`Embedding generado (${body.dims} dims)`);
+      toast.success(`${t("ai_settings.embedding_generated", "Embedding generated")} (${body.dims} dims)`);
       qc.invalidateQueries({ queryKey: ["ai-knowledge-docs"] });
     } catch (e: any) {
-      toast.error(`Error al generar embedding: ${e.message}`);
+      toast.error(`${t("ai_settings.embedding_error", "Error generating embedding")}: ${e.message}`);
     } finally {
       setEmbeddingId(null);
     }
@@ -210,7 +211,7 @@ export default function AiAgentSettings() {
   const deleteDoc = async (id: string) => {
     const { error } = await supabase.from("ai_knowledge_docs").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Documento eliminado");
+    toast.success(t("ai_settings.doc_deleted", "Document deleted"));
     qc.invalidateQueries({ queryKey: ["ai-knowledge-docs"] });
   };
 
@@ -221,13 +222,13 @@ export default function AiAgentSettings() {
       <div className="glass p-5 space-y-3">
         <div className="flex items-center gap-2 font-semibold">
           <Bot className="h-4 w-4 text-primary" />
-          Agente IA WhatsApp
+          {t("ai_settings.title", "WhatsApp AI Agent")}
         </div>
         <div className="space-y-1.5">
-          <Label>Sucursal</Label>
+          <Label>{t("common.branch", "Branch")}</Label>
           <Select value={selectedBranch} onValueChange={setSelectedBranch}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona sucursal…" />
+              <SelectValue placeholder={t("ai_settings.select_branch", "Select branch...")} />
             </SelectTrigger>
             <SelectContent>
               {(branches ?? []).map((b: any) => (
@@ -242,27 +243,27 @@ export default function AiAgentSettings() {
       <div className="glass p-5 space-y-4">
         <div className="flex items-center gap-2 font-semibold">
           <Sparkles className="h-4 w-4 text-primary" />
-          System Prompt
+          {t("ai_settings.prompt_section", "System Prompt")}
           {config?.system_prompt && (
-            <Badge variant="secondary" className="ml-auto text-xs">Personalizado</Badge>
+            <Badge variant="secondary" className="ml-auto text-xs">{t("ai_settings.custom", "Custom")}</Badge>
           )}
           {!config?.system_prompt && (
-            <Badge variant="outline" className="ml-auto text-xs">Usando prompt por defecto</Badge>
+            <Badge variant="outline" className="ml-auto text-xs">{t("ai_settings.using_default", "Using default prompt")}</Badge>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Instruye al agente cómo debe comportarse con tus clientes. Si lo dejas vacío, se usará el prompt estándar.
+          {t("ai_settings.prompt_desc", "Instruct the agent how to interact with your customers. If left blank, the standard prompt is used.")}
         </p>
 
         {loadingConfig ? (
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("common.loading", "Loading...")}
           </div>
         ) : (
           <div className="space-y-4">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label>Instrucciones del agente</Label>
+                <Label>{t("ai_settings.agent_instructions", "Agent Instructions")}</Label>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -270,7 +271,7 @@ export default function AiAgentSettings() {
                   onClick={() => setSystemPrompt(DEFAULT_PROMPT)}
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  Restaurar defecto
+                  {t("ai_settings.reset_default", "Reset to default")}
                 </Button>
               </div>
               <Textarea
@@ -284,7 +285,7 @@ export default function AiAgentSettings() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Modelo IA</Label>
+                <Label>{t("ai_settings.ai_model", "AI Model")}</Label>
                 <Select value={aiModel} onValueChange={setAiModel}>
                   <SelectTrigger>
                     <SelectValue />
@@ -297,20 +298,20 @@ export default function AiAgentSettings() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Temperatura (creatividad)</Label>
+                <Label>{t("ai_settings.temperature", "Temperature (creativity)")}</Label>
                 <Input
                   type="number"
                   min="0" max="1" step="0.1"
                   value={temperature}
                   onChange={e => setTemperature(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">0 = preciso · 1 = creativo</p>
+                <p className="text-xs text-muted-foreground">{t("ai_settings.temp_hint", "0 = precise · 1 = creative")}</p>
               </div>
             </div>
 
             <Button onClick={saveConfig} disabled={savingConfig}>
               {savingConfig ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Guardar configuración
+              {t("ai_settings.save_config", "Save Configuration")}
             </Button>
           </div>
         )}
@@ -320,29 +321,29 @@ export default function AiAgentSettings() {
       <div className="glass p-5 space-y-4">
         <div className="flex items-center gap-2 font-semibold">
           <CalendarClock className="h-4 w-4 text-primary" />
-          Contexto Diario
+          {t("ai_settings.daily_context", "Daily Context")}
         </div>
         <p className="text-xs text-muted-foreground">
-          Esta información se inyecta automáticamente en cada conversación. El agente la usa para responder con datos del día actualizados.
+          {t("ai_settings.daily_desc", "This information is automatically injected into every conversation. The agent uses it to answer with up-to-date daily info.")}
         </p>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Recomendación del día</Label>
+            <Label>{t("ai_settings.daily_rec", "Recommendation of the day")}</Label>
             <Textarea
               rows={3}
-              placeholder="ej. Hoy tenemos croissant de jamón y queso recién horneado a $8.500. ¡Perfectos para el desayuno!"
+              placeholder={t("ai_settings.daily_rec_placeholder", "e.g. Today we have fresh baked ham & cheese croissants at $4.50. Perfect for breakfast!")}
               value={dailyRecommendation}
               onChange={e => setDailyRecommendation(e.target.value)}
               className="resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              El agente la mencionará proactivamente cuando sea relevante. Actualízala cada día.
+              {t("ai_settings.daily_rec_hint", "The agent mentions this proactively when relevant. Update it each day.")}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Tiempo de demora para domicilios (minutos)</Label>
+            <Label>{t("ai_settings.delay_minutes", "Estimated delivery time (minutes)")}</Label>
             <Input
               type="number"
               min="1"
@@ -352,20 +353,20 @@ export default function AiAgentSettings() {
               className="w-32"
             />
             <p className="text-xs text-muted-foreground">
-              El agente informará este tiempo al cliente al confirmar el pedido.
+              {t("ai_settings.delay_hint", "The agent communicates this estimated time when confirming an order.")}
             </p>
           </div>
 
           <div className="rounded-md bg-muted/40 border px-3 py-2 space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Fecha y hora actual</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("ai_settings.current_dt", "Current date and time")}</p>
             <p className="text-xs text-muted-foreground">
-              Se inyecta automáticamente en cada mensaje — no requiere configuración.
+              {t("ai_settings.dt_injected", "Automatically injected in every message — no setup required.")}
             </p>
           </div>
 
           <Button onClick={saveConfig} disabled={savingConfig}>
             {savingConfig ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar contexto diario
+            {t("ai_settings.save_daily", "Save Daily Context")}
           </Button>
         </div>
       </div>
@@ -374,19 +375,18 @@ export default function AiAgentSettings() {
       <div className="glass p-5 space-y-4">
         <div className="flex items-center gap-2 font-semibold">
           <BookOpen className="h-4 w-4 text-primary" />
-          Base de Conocimiento (RAG)
+          {t("ai_settings.rag_title", "Knowledge Base (RAG)")}
           <span className="ml-auto text-xs font-normal text-muted-foreground">
-            {docs?.length ?? 0} documento{docs?.length !== 1 ? "s" : ""}
+            {docs?.length ?? 0} {t("ai_settings.docs_count", "documents")}
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Agrega documentos (políticas, menú extendido, preguntas frecuentes, horarios…). El agente consultará
-          automáticamente el contexto más relevante antes de responder.
+          {t("ai_settings.rag_desc", "Add documents (policies, extended menu, FAQ, business hours). The agent automatically queries the most relevant context.")}
         </p>
 
         {loadingDocs ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Cargando documentos…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("common.loading", "Loading...")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -403,11 +403,11 @@ export default function AiAgentSettings() {
                       <Badge variant="secondary" className="text-[10px] h-4">Embedding ✓</Badge>
                     ) : (
                       <Badge variant="destructive" className="text-[10px] h-4">
-                        <AlertCircle className="h-2.5 w-2.5 mr-1" />Sin embedding
+                        <AlertCircle className="h-2.5 w-2.5 mr-1" />{t("ai_settings.no_embedding", "No embedding")}
                       </Badge>
                     )}
                     <span className="text-[10px] text-muted-foreground">
-                      {new Date(doc.created_at).toLocaleDateString("es-CO")}
+                      {new Date(doc.created_at).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -417,7 +417,7 @@ export default function AiAgentSettings() {
                       size="icon"
                       variant="outline"
                       className="h-7 w-7"
-                      title="Generar embedding"
+                      title={t("ai_settings.generate_embedding", "Generate embedding")}
                       disabled={embeddingId === doc.id}
                       onClick={() => generateEmbedding(doc.id)}
                     >
@@ -430,7 +430,7 @@ export default function AiAgentSettings() {
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 text-destructive hover:text-destructive"
-                    title="Eliminar documento"
+                    title={t("common.delete", "Delete")}
                     onClick={() => deleteDoc(doc.id)}
                   >
                     <Trash2 className="h-3 w-3" />
@@ -441,7 +441,7 @@ export default function AiAgentSettings() {
 
             <Button variant="outline" className="w-full" onClick={() => setAddDocOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Agregar documento de conocimiento
+              {t("ai_settings.add_doc", "Add Knowledge Document")}
             </Button>
           </div>
         )}
@@ -451,36 +451,36 @@ export default function AiAgentSettings() {
       <Dialog open={addDocOpen} onOpenChange={setAddDocOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nuevo documento de conocimiento</DialogTitle>
+            <DialogTitle>{t("ai_settings.new_doc_title", "New Knowledge Document")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label>Título</Label>
+              <Label>{t("ai_settings.doc_title", "Title")}</Label>
               <Input
-                placeholder="ej. Política de envíos, Menú de bebidas especiales, Horarios…"
+                placeholder={t("ai_settings.title_placeholder", "e.g. Shipping Policy, Specialty Drinks Menu, Operating Hours...")}
                 value={newDocTitle}
                 onChange={e => setNewDocTitle(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Contenido</Label>
+              <Label>{t("ai_settings.doc_content", "Content")}</Label>
               <Textarea
                 rows={12}
-                placeholder="Escribe o pega aquí el contenido del documento. El agente lo usará como referencia cuando sea relevante para la conversación."
+                placeholder={t("ai_settings.content_placeholder", "Type or paste document content here. The agent will reference it when relevant.")}
                 value={newDocContent}
                 onChange={e => setNewDocContent(e.target.value)}
                 className="font-mono text-sm resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                {newDocContent.length} caracteres · Se generará un embedding automáticamente.
+                {newDocContent.length} {t("ai_settings.chars_count", "characters · An embedding will be generated automatically.")}
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDocOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setAddDocOpen(false)}>{t("common.cancel", "Cancel")}</Button>
             <Button onClick={addDoc} disabled={savingDoc}>
               {savingDoc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Guardar documento
+              {t("ai_settings.save_doc", "Save Document")}
             </Button>
           </DialogFooter>
         </DialogContent>

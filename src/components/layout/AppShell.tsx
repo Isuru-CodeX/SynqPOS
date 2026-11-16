@@ -42,7 +42,19 @@ function Shell() {
     refetchInterval: 15000,
   });
 
-  const locale = language === "es" ? "es-CO" : "en-US";
+  const localeMap: Record<string, string> = {
+    en: "en-US",
+    es: "es-CO",
+    fr: "fr-FR",
+    de: "de-DE",
+    ja: "ja-JP",
+    zh: "zh-CN",
+    si: "si-LK",
+    ta: "ta-LK",
+    hi: "hi-IN",
+    ar: "ar-AE",
+  };
+  const locale = localeMap[language] || "en-US";
   const today = new Date().toLocaleDateString(locale, {
     weekday: "short",
     day: "numeric",

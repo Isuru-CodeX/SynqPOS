@@ -3,11 +3,14 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { SynqLogo } from "@/components/shared/SynqLogo";
+import { useI18n } from "@/lib/i18n";
 
 export default function Forbidden() {
+  const { t } = useI18n();
+
   useEffect(() => {
-    document.title = "Acceso Restringido (403) | SynqPOS";
-  }, []);
+    document.title = `${t("forbidden.title", "Access Restricted (403)")} | SynqPOS`;
+  }, [t]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 gap-6">
@@ -20,16 +23,15 @@ export default function Forbidden() {
 
         <div>
           <div className="eyebrow eyebrow-muted mb-2">ERROR 403</div>
-          <h1 className="page-header-title">Acceso restringido</h1>
+          <h1 className="page-header-title">{t("forbidden.header", "Access Restricted")}</h1>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-            Tu rol actual no tiene permisos para abrir esta sección.
-            Contacta al administrador si crees que es un error.
+            {t("forbidden.desc", "Your current role does not have permission to access this section. Contact your administrator if you believe this is an error.")}
           </p>
         </div>
 
         <Button asChild className="w-full h-11">
           <Link to="/">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Volver al inicio
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t("action.back_to_dashboard", "Back to Dashboard")}
           </Link>
         </Button>
       </div>

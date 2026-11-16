@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ type Membership = {
 export default function UsersSettings() {
   const { tenantId, branches, hasRole } = useTenantContext();
   const { user } = useAuth();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const canManage = hasRole("owner", "admin");
 
@@ -78,14 +80,14 @@ export default function UsersSettings() {
   const changeRole = async (m: Membership, newRoleVal: AppRole) => {
     if (m.role === newRoleVal) return;
     if (m.role === "owner" && newRoleVal !== "owner" && ownersCount <= 1) {
-      return toast.error("Debe haber al menos un dueño en el bar");
+      return toast.error(t("users.min_owner_error", "There must be at least one owner"));
     }
     const { error } = await supabase
       .from("user_roles")
       .update({ role: newRoleVal })
       .eq("id", m.id);
     if (error) return toast.error(error.message);
-    toast.success("Rol actualizado");
+    toast.success(t("users.role_updated", "Role updated"));
     qc.invalidateQueries({ queryKey: ["tenant-members"] });
   };
 
@@ -95,28 +97,28 @@ export default function UsersSettings() {
       .update({ branch_id: branchId })
       .eq("id", m.id);
     if (error) return toast.error(error.message);
-    toast.success("Sucursal actualizada");
+    toast.success(t("users.branch_updated", "Branch updated"));
     qc.invalidateQueries({ queryKey: ["tenant-members"] });
   };
 
   const removeMember = async (m: Membership) => {
     if (m.user_id === user?.id) {
-      return toast.error("No puedes eliminar tu propio acceso");
+      return toast.error(t("users.cannot_remove_self", "You cannot remove your own access"));
     }
     if (m.role === "owner" && ownersCount <= 1) {
-      return toast.error("Debe haber al menos un dueño en el bar");
+      return toast.error(t("users.min_owner_error", "There must be at least one owner"));
     }
-    if (!confirm(`¿Quitar acceso a ${m.profile?.email ?? "este usuario"}?`)) return;
+    if (!confirm(`${t("users.remove_confirm", "Remove access for")} ${m.profile?.email ?? "this user"}?`)) return;
     const { error } = await supabase.from("user_roles").delete().eq("id", m.id);
     if (error) return toast.error(error.message);
-    toast.success("Acceso revocado");
+    toast.success(t("users.access_revoked", "Access revoked"));
     qc.invalidateQueries({ queryKey: ["tenant-members"] });
   };
 
   const invite = async () => {
     if (!tenantId) return;
     const email = inviteEmail.trim().toLowerCase();
-    if (!email) return toast.error("Ingresa un email");
+    if (!email) return toast.error(t("users.enter_email", "Please enter an email"));
     setInviting(true);
     try {
       const { data: profile, error: pErr } = await supabase
@@ -126,7 +128,7 @@ export default function UsersSettings() {
         .maybeSingle();
       if (pErr) throw pErr;
       if (!profile) {
-        toast.error("Ese usuario aún no existe. Usa la pestaña 'Crear nuevo' para registrarlo.");
+        toast.error(t("users.user_not_found_create", "User not found. Use 'Create New' to register them."));
         return;
       }
       const { data: existing } = await supabase
@@ -137,7 +139,7 @@ export default function UsersSettings() {
         .eq("role", inviteRole)
         .maybeSingle();
       if (existing) {
-        toast.error("Ese usuario ya tiene este rol asignado");
+        toast.error(t("users.already_has_role", "User already has this role assigned"));
         return;
       }
       const { error: insErr } = await supabase
@@ -149,7 +151,7 @@ export default function UsersSettings() {
           branch_id: inviteBranch === "__all__" ? null : inviteBranch,
         });
       if (insErr) throw insErr;
-      toast.success("Usuario añadido al bar");
+      toast.success(t("users.user_added", "User added to business"));
       setInviteEmail("");
       qc.invalidateQueries({ queryKey: ["tenant-members"] });
     } catch (e: any) {
@@ -162,7 +164,7 @@ export default function UsersSettings() {
   const createNew = async () => {
     if (!tenantId) return;
     if (!newEmail.trim() || newPassword.length < 6) {
-      return toast.error("Email y contraseña (mín. 6 caracteres) son requeridos");
+      return toast.error(t("users.validation_error", "Email and password (min. 6 characters) are required"));
     }
     setCreating(true);
     try {
@@ -178,13 +180,13 @@ export default function UsersSettings() {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast.success(`Usuario ${newEmail} creado. Comparte la contraseña con él.`);
+      toast.success(`${t("users.user_created", "User created")}: ${newEmail}.`);
       setNewEmail("");
       setNewPassword("");
       setNewName("");
       qc.invalidateQueries({ queryKey: ["tenant-members"] });
     } catch (e: any) {
-      toast.error(e.message ?? "No se pudo crear el usuario");
+      toast.error(e.message ?? t("users.create_failed", "Could not create user"));
     } finally {
       setCreating(false);
     }
@@ -198,48 +200,48 @@ export default function UsersSettings() {
             <span className="orb orb-sq w-8 h-8">
               <UserPlus className="h-4 w-4" />
             </span>
-            <h3 className="font-semibold text-ink-900">Añadir usuario al bar</h3>
+            <h3 className="font-semibold text-ink-900">{t("users.add_user", "Add user to business")}</h3>
           </div>
 
           <Tabs defaultValue="create">
             <TabsList>
-              <TabsTrigger value="create">Crear nuevo</TabsTrigger>
-              <TabsTrigger value="invite">Invitar existente</TabsTrigger>
+              <TabsTrigger value="create">{t("users.create_new", "Create New")}</TabsTrigger>
+              <TabsTrigger value="invite">{t("users.invite_existing", "Invite Existing")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="create" className="mt-4 space-y-3">
               <p className="h-meta">
-                Crea la cuenta y asigna el rol en un solo paso. Comparte el email y contraseña con el usuario.
+                {t("users.create_desc", "Create the account and assign a role in one step. Share the email and password with the user.")}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Nombre</Label>
+                  <Label>{t("users.name", "Name")}</Label>
                   <Input
-                    placeholder="Juan Pérez"
+                    placeholder="John Doe"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Email</Label>
+                  <Label>{t("users.email", "Email")}</Label>
                   <Input
                     type="email"
-                    placeholder="usuario@correo.com"
+                    placeholder="user@example.com"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Contraseña</Label>
+                  <Label>{t("users.password", "Password")}</Label>
                   <Input
                     type="text"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={t("users.pwd_min", "Min. 6 characters")}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Rol</Label>
+                  <Label>{t("users.role", "Role")}</Label>
                   <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -250,11 +252,11 @@ export default function UsersSettings() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Sucursal</Label>
+                  <Label>{t("common.branch", "Branch")}</Label>
                   <Select value={newBranch} onValueChange={setNewBranch}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all__">Todas las sucursales</SelectItem>
+                      <SelectItem value="__all__">{t("common.all_branches", "All branches")}</SelectItem>
                       {branches.map((b) => (
                         <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                       ))}
@@ -264,26 +266,26 @@ export default function UsersSettings() {
               </div>
               <button type="button" className="g-btn g-btn-primary" onClick={createNew} disabled={creating}>
                 <KeyRound className="h-4 w-4" />
-                {creating ? "Creando…" : "Crear usuario"}
+                {creating ? t("common.creating", "Creating...") : t("users.create_user_btn", "Create User")}
               </button>
             </TabsContent>
 
             <TabsContent value="invite" className="mt-4 space-y-3">
               <p className="h-meta">
-                Si el usuario ya tiene cuenta en otro bar del sistema, búscalo por email para asignarle un rol aquí.
+                {t("users.invite_desc", "If the user already has an account in another branch or tenant, search by email to assign a role here.")}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_180px_auto] gap-3 items-end">
                 <div className="space-y-1.5">
-                  <Label>Email</Label>
+                  <Label>{t("users.email", "Email")}</Label>
                   <Input
                     type="email"
-                    placeholder="usuario@correo.com"
+                    placeholder="user@example.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Rol</Label>
+                  <Label>{t("users.role", "Role")}</Label>
                   <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -294,11 +296,11 @@ export default function UsersSettings() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Sucursal</Label>
+                  <Label>{t("common.branch", "Branch")}</Label>
                   <Select value={inviteBranch} onValueChange={setInviteBranch}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all__">Todas</SelectItem>
+                      <SelectItem value="__all__">{t("common.all", "All")}</SelectItem>
                       {branches.map((b) => (
                         <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                       ))}
@@ -306,7 +308,7 @@ export default function UsersSettings() {
                   </Select>
                 </div>
                 <button type="button" className="g-btn g-btn-primary" onClick={invite} disabled={inviting}>
-                  {inviting ? "Añadiendo…" : "Añadir"}
+                  {inviting ? t("common.adding", "Adding...") : t("common.add", "Add")}
                 </button>
               </div>
             </TabsContent>
@@ -316,26 +318,26 @@ export default function UsersSettings() {
 
       <div className="glass rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-black/5">
-          <p className="font-semibold text-ink-900">Miembros del bar</p>
+          <p className="font-semibold text-ink-900">{t("users.team_members", "Team Members")}</p>
           <p className="h-meta">
-            {memberships?.length ?? 0} {(memberships?.length ?? 0) === 1 ? "usuario" : "usuarios"} con acceso
+            {memberships?.length ?? 0} {(memberships?.length ?? 0) === 1 ? t("users.user_one", "user with access") : t("users.user_many", "users with access")}
           </p>
         </div>
         {isLoading ? (
-          <div className="h-meta py-12 text-center">Cargando…</div>
+          <div className="h-meta py-12 text-center">{t("common.loading", "Loading...")}</div>
         ) : !memberships || memberships.length === 0 ? (
           <div className="p-6">
-            <EmptyState icon={Users} title="Sin usuarios" description="Aún no hay miembros en este bar" />
+            <EmptyState icon={Users} title={t("users.no_users", "No users")} description={t("users.no_users_desc", "No members in this business yet")} />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-black/5">
-                  <th className="text-left px-5 py-3 h-label">Usuario</th>
-                  <th className="text-left px-5 py-3 h-label">Rol</th>
-                  <th className="text-left px-5 py-3 h-label">Sucursal</th>
-                  {canManage && <th className="w-12 px-5 py-3 sr-only">Acciones</th>}
+                  <th className="text-left px-5 py-3 h-label">{t("users.user", "User")}</th>
+                  <th className="text-left px-5 py-3 h-label">{t("users.role", "Role")}</th>
+                  <th className="text-left px-5 py-3 h-label">{t("common.branch", "Branch")}</th>
+                  {canManage && <th className="w-12 px-5 py-3 sr-only">{t("common.actions", "Actions")}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -347,7 +349,7 @@ export default function UsersSettings() {
                         <div className="font-medium flex items-center gap-2 text-ink-900">
                           {m.profile?.full_name || m.profile?.email || m.user_id.slice(0, 8)}
                           {isSelf && (
-                            <span className="g-pill g-pill-brand g-pill-h20">Tú</span>
+                            <span className="g-pill g-pill-brand g-pill-h20">{t("users.you", "You")}</span>
                           )}
                         </div>
                         {m.profile?.email && (
@@ -381,7 +383,7 @@ export default function UsersSettings() {
                           >
                             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">Todas las sucursales</SelectItem>
+                              <SelectItem value="all">{t("common.all_branches", "All branches")}</SelectItem>
                               {branches.map((b) => (
                                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                               ))}
@@ -389,7 +391,7 @@ export default function UsersSettings() {
                           </Select>
                         ) : (
                           <span className="h-meta">
-                            {branches.find((b) => b.id === m.branch_id)?.name ?? "Todas"}
+                            {branches.find((b) => b.id === m.branch_id)?.name ?? t("common.all", "All")}
                           </span>
                         )}
                       </td>
@@ -402,10 +404,10 @@ export default function UsersSettings() {
                             disabled={isSelf || m.role === "super_admin"}
                             title={
                               isSelf
-                                ? "No puedes eliminarte"
+                                ? t("users.cannot_delete_self", "Cannot delete yourself")
                                 : m.role === "super_admin"
-                                ? "No puedes quitar un super admin"
-                                : "Quitar acceso"
+                                ? t("users.cannot_delete_sa", "Cannot remove super admin")
+                                : t("users.revoke_access", "Revoke access")
                             }
                           >
                             <Trash2 className="h-4 w-4" />

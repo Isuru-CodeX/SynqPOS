@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useI18n } from "@/lib/i18n";
 
 export function TransferDialog({ tenantId, branchId, userId, products, centers, onClose }: any) {
+  const { t } = useI18n();
   const [productId, setProductId] = useState<string>("");
   const [fromCenterId, setFromCenterId] = useState<string>("");
   const [toCenterId, setToCenterId] = useState<string>("");
@@ -18,12 +20,14 @@ export function TransferDialog({ tenantId, branchId, userId, products, centers, 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (fromCenterId === toCenterId) {
-      toast.error("El centro de origen y destino deben ser diferentes");
+      toast.error(t("inventory.transfer_same_center", "Source and destination centers must be different"));
       return;
     }
 
     setSaving(true);
     try {
+      const fromName = centers.find((c: any) => c.id === fromCenterId)?.name ?? "Origin";
+      const toName = centers.find((c: any) => c.id === toCenterId)?.name ?? "Destination";
       const { error } = await supabase.rpc("transfer_inventory" as any, {
         _tenant_id: tenantId,
         _branch_id: branchId,
@@ -31,11 +35,11 @@ export function TransferDialog({ tenantId, branchId, userId, products, centers, 
         _from_center_id: fromCenterId,
         _to_center_id: toCenterId,
         _quantity: Number(qty),
-        _reason: `Transferencia ${centers.find((c: any) => c.id === fromCenterId)?.name} → ${centers.find((c: any) => c.id === toCenterId)?.name}`,
+        _reason: `Transfer: ${fromName} → ${toName}`,
       });
       if (error) throw error;
 
-      toast.success("Transferencia completada");
+      toast.success(t("inventory.transfer_completed", "Stock transfer completed successfully"));
       onClose();
     } catch (err: any) {
       toast.error(err.message);
@@ -49,14 +53,14 @@ export function TransferDialog({ tenantId, branchId, userId, products, centers, 
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <ArrowRightLeft className="h-5 w-5 text-primary" />
-          Transferir Stock
+          {t("inventory.transfer_stock_title", "Transfer Stock")}
         </DialogTitle>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4 py-2">
         <div className="space-y-1.5">
-          <Label>Producto</Label>
+          <Label>{t("inventory.col_product", "Product")}</Label>
           <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("inventory.select_placeholder", "Select...")} /></SelectTrigger>
             <SelectContent>
               {products.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
@@ -65,18 +69,18 @@ export function TransferDialog({ tenantId, branchId, userId, products, centers, 
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label>Origen</Label>
+            <Label>{t("inventory.origin_center", "Origin Center")}</Label>
             <Select value={fromCenterId} onValueChange={setFromCenterId}>
-              <SelectTrigger><SelectValue placeholder="Desde..." /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("inventory.from_placeholder", "From...")} /></SelectTrigger>
               <SelectContent>
                 {centers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Destino</Label>
+            <Label>{t("inventory.dest_center", "Destination Center")}</Label>
             <Select value={toCenterId} onValueChange={setToCenterId}>
-              <SelectTrigger><SelectValue placeholder="Hacia..." /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("inventory.to_placeholder", "To...")} /></SelectTrigger>
               <SelectContent>
                 {centers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
@@ -85,12 +89,12 @@ export function TransferDialog({ tenantId, branchId, userId, products, centers, 
         </div>
 
         <div className="space-y-1.5">
-          <Label>Cantidad</Label>
+          <Label>{t("inventory.quantity", "Quantity")}</Label>
           <Input type="number" step="0.01" required value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0.00" className="h-12 text-lg" />
         </div>
 
         <Button type="submit" className="w-full h-12" disabled={saving || !productId || !qty || !fromCenterId || !toCenterId}>
-          {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Procesando...</> : "Transferir"}
+          {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("common.loading", "Processing...")}</> : t("inventory.transfer_btn", "Transfer Stock")}
         </Button>
       </form>
     </DialogContent>

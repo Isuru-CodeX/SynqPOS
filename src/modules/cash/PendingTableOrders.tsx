@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/format";
 import { CreditCard, Eye, Users, Clock, UtensilsCrossed } from "lucide-react";
 import { PaymentDialog, type PayMethod } from "@/modules/pos/PaymentDialog";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   tenantId: string;
@@ -15,6 +16,7 @@ interface Props {
 export function PendingTableOrders({ tenantId, branchId }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [payOrder, setPayOrder] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,7 +81,7 @@ export function PendingTableOrders({ tenantId, branchId }: Props) {
       qc.invalidateQueries({ queryKey: ["table-orders-open"] });
       qc.invalidateQueries({ queryKey: ["tables"] });
     } catch (err: any) {
-      toast.error(err.message ?? "Error al cobrar");
+      toast.error(err.message ?? t("cash.charge_error", "Error processing payment"));
     } finally {
       setSubmitting(false);
     }
@@ -93,16 +95,16 @@ export function PendingTableOrders({ tenantId, branchId }: Props) {
       <div className="flex items-center justify-between px-4 py-3 border-b g-pending-header">
         <div className="flex items-center gap-2">
           <UtensilsCrossed size={16} className="g-pending-icon" />
-          <span className="font-semibold g-pending-header-label">Cuentas de mesa pendientes</span>
+          <span className="font-semibold g-pending-header-label">{t("cash.pending_tables", "Pending Table Bills")}</span>
           {list.length > 0 && (
             <span className="pill pill-warn g-kds-pill-micro">{list.length}</span>
           )}
         </div>
-        <span className="h-meta">Tiempo real</span>
+        <span className="h-meta">{t("cash.realtime", "Real-time")}</span>
       </div>
 
       {list.length === 0 ? (
-        <div className="py-10 text-center h-meta">No hay cuentas enviadas por meseros.</div>
+        <div className="py-10 text-center h-meta">{t("cash.no_pending_tables", "No table bills sent by waitstaff.")}</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
           {list.map((o: any) => {
@@ -115,7 +117,7 @@ export function PendingTableOrders({ tenantId, branchId }: Props) {
               <div key={o.id} className="glass-thin rounded-2xl p-3 flex flex-col gap-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="h-display g-pending-table-name">{o.tables?.name ?? "Mesa"}</div>
+                    <div className="h-display g-pending-table-name">{o.tables?.name ?? t("kds.table", "Table")}</div>
                     <div className="h-meta flex items-center gap-2 mt-0.5">
                       <Users size={12} /> {waiter}
                       <span className="opacity-40">·</span>
@@ -124,7 +126,7 @@ export function PendingTableOrders({ tenantId, branchId }: Props) {
                   </div>
                   <div className="text-right">
                     <div className="h-num g-pending-total">{formatCurrency(Number(o.total))}</div>
-                    <div className="h-meta mt-0.5">{items.length} items</div>
+                    <div className="h-meta mt-0.5">{items.length} {t("pos.items", "items")}</div>
                   </div>
                 </div>
 
@@ -136,10 +138,10 @@ export function PendingTableOrders({ tenantId, branchId }: Props) {
                 <div className="grid g-pending-grid gap-2 mt-auto">
                   <button type="button" className="g-btn g-btn-primary g-pending-cobrar"
                     onClick={() => setPayOrder(o)}>
-                    <CreditCard size={14} /> Cobrar
+                    <CreditCard size={14} /> {t("cash.charge_bill", "Collect Payment")}
                   </button>
                   <button type="button" className="g-btn g-btn-ghost g-pending-view"
-                    title="Ver comanda"
+                    title={t("cash.view_order", "View order ticket")}
                     onClick={() => navigate(`/tables/${o.id}`)}>
                     <Eye size={15} />
                   </button>

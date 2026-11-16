@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sparkles, Send, Plus, TrendingUp, Package, Users, Truck, Wallet,
@@ -16,20 +17,7 @@ interface Message {
   actions?: string[];
 }
 
-const SUGGESTIONS = [
-  "Ventas por hora de hoy",
-  "¿Qué insumos pedir esta semana?",
-  "Top 10 clientes del trimestre",
-  "Comparar sucursales",
-];
 
-const DATA_SOURCES = [
-  { icon: TrendingUp, label: "Ventas POS", sub: "transacciones del mes" },
-  { icon: Package,   label: "Inventario",  sub: "SKUs activos" },
-  { icon: Users,     label: "CRM clientes", sub: "clientes activos" },
-  { icon: Truck,     label: "Órdenes digitales", sub: "Rappi · DiDi · Uber" },
-  { icon: Wallet,    label: "Caja y pagos", sub: "sesiones del día" },
-];
 
 function AiOrb({ size = 34 }: { size?: number }) {
   const sizeClass = size >= 48 ? "g-ai-orb-50" : "g-ai-orb-34";
@@ -52,18 +40,19 @@ function UserOrb({ initials }: { initials: string }) {
 }
 
 function MarginBarChart() {
+  const { t } = useI18n();
   const data = [
-    { name: "Capuchino Clásico",     margin: 71 },
-    { name: "Cheesecake de Fresa",   margin: 68 },
-    { name: "Frappé Mocha",          margin: 64 },
-    { name: "Croissant Mantequilla", margin: 58 },
-    { name: "Latte Vainilla",        margin: 55 },
+    { name: "Classic Cappuccino",    margin: 71 },
+    { name: "Strawberry Cheesecake", margin: 68 },
+    { name: "Mocha Frappe",          margin: 64 },
+    { name: "Butter Croissant",      margin: 58 },
+    { name: "Vanilla Latte",         margin: 55 },
   ];
   return (
     <div className="glass-thin g-ai-chart-wrap">
       <div className="flex justify-between items-center mb-3">
-        <span className="h-label">Margen bruto por producto · este mes</span>
-        <span className="h-meta">Fuente: ventas + costos</span>
+        <span className="h-label">{t("ai.margin_title", "Gross margin by product · this month")}</span>
+        <span className="h-meta">{t("ai.source_sales_costs", "Source: sales + costs")}</span>
       </div>
       <div className="g-ai-margin-chart">
         {data.map((d, i) => (
@@ -82,13 +71,29 @@ function MarginBarChart() {
 
 export default function AIAgent() {
   const { roles } = useTenantContext();
+  const { t } = useI18n();
   const initials = (roles[0] ?? "U").slice(0, 2).toUpperCase();
+
+  const suggestions = [
+    t("ai.sugg_1", "Today's sales by hour"),
+    t("ai.sugg_2", "What supplies to reorder this week?"),
+    t("ai.sugg_3", "Top 10 customers this quarter"),
+    t("ai.sugg_4", "Compare branches"),
+  ];
+
+  const dataSources = [
+    { icon: TrendingUp, label: t("ai.source_sales", "POS Sales"), sub: t("ai.source_sales_sub", "monthly transactions") },
+    { icon: Package,   label: t("ai.source_inv", "Inventory"),   sub: t("ai.source_inv_sub", "active SKUs") },
+    { icon: Users,     label: t("ai.source_crm", "CRM Customers"), sub: t("ai.source_crm_sub", "active clients") },
+    { icon: Truck,     label: t("ai.source_digital", "Digital Orders"), sub: "Rappi · DiDi · Uber" },
+    { icon: Wallet,    label: t("ai.source_cash", "Cash & Register"), sub: t("ai.source_cash_sub", "daily sessions") },
+  ];
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "ai",
-      text: "Hola, soy el Agente S360T. Tengo acceso completo a tus ventas, inventario, clientes y más. ¿En qué puedo ayudarte hoy?",
+      text: t("ai.welcome", "Hello, I am the SynqPOS AI Agent. I have full access to your sales, inventory, customers, and more. How can I help you today?"),
     },
   ]);
   const [input, setInput] = useState("");
@@ -111,31 +116,31 @@ export default function AIAgent() {
 
     const lower = text.toLowerCase();
     let aiMsg: Message;
-    if (lower.includes("margen") || lower.includes("producto")) {
+    if (lower.includes("margen") || lower.includes("margin") || lower.includes("producto") || lower.includes("product")) {
       aiMsg = {
         id: crypto.randomUUID(),
         role: "ai",
-        text: "Analicé las ventas del mes. Estos son los productos con mayor margen bruto:",
+        text: t("ai.reply_margin", "I analyzed this month's sales. Here are the products with highest gross margin:"),
         chart: true,
         insights: [
-          "El Capuchino Clásico tiene 71% de margen — oportunidad para promocionar el upsell de leche vegetal.",
-          "Cheesecake de Fresa tiene margen alto pero stock bajo en algunas sucursales — considera una transferencia.",
+          t("ai.insight_1", "Classic Cappuccino has a 71% margin — great opportunity to promote oat/almond milk upgrades."),
+          t("ai.insight_2", "Strawberry Cheesecake has high margin but low stock in some branches — consider an inventory transfer."),
         ],
-        actions: ["Crear transferencia", "Exportar reporte"],
+        actions: [t("ai.action_transfer", "Create transfer"), t("ai.action_export", "Export report")],
       };
-    } else if (lower.includes("venta") || lower.includes("hoy")) {
+    } else if (lower.includes("venta") || lower.includes("sale") || lower.includes("today") || lower.includes("hoy")) {
       aiMsg = {
         id: crypto.randomUUID(),
         role: "ai",
-        text: "Hoy llevas ventas activas en todas las sucursales. El pico de demanda ocurre entre las 12:00 y las 14:00. Consulta el Dashboard para el detalle completo.",
-        actions: ["Ver dashboard", "Exportar Excel"],
+        text: t("ai.reply_sales", "You have active sales across all branches today. Peak volume is between 12:00 and 14:00. Check the Dashboard for real-time details."),
+        actions: [t("ai.action_view_dash", "View dashboard"), t("ai.action_export_excel", "Export Excel")],
       };
     } else {
       aiMsg = {
         id: crypto.randomUUID(),
         role: "ai",
-        text: "Entendido. Estoy consultando los datos de tu negocio para responderte con la mayor precisión posible. ¿Puedes darme más contexto sobre lo que necesitas?",
-        actions: ["Ver ventas", "Ver inventario"],
+        text: t("ai.reply_default", "Understood. I am querying your business metrics to provide the most accurate insight. What specific details would you like to review?"),
+        actions: [t("ai.action_view_sales", "View sales"), t("ai.action_view_inv", "View inventory")],
       };
     }
 
@@ -151,14 +156,14 @@ export default function AIAgent() {
           <AiOrb size={50} />
           <div className="g-ai-header-info">
             <div className="g-ai-header-title h-display">
-              Agente S360T
+              SynqPOS AI Agent
               <span className="pill pill-brand g-kds-pill-micro">BETA</span>
             </div>
-            <div className="h-meta">Conectado a tu inventario, ventas y CRM</div>
+            <div className="h-meta">{t("ai.connected_meta", "Connected to your inventory, sales, and CRM")}</div>
           </div>
           <div className="pill pill-ok">
             <span className="dot dot-ok" />
-            En línea
+            {t("ai.online", "Online")}
           </div>
         </div>
 
@@ -209,7 +214,7 @@ export default function AIAgent() {
                   <span className="dot dot-brand g-ai-dot-mid" />
                   <span className="dot dot-brand g-ai-dot-dim" />
                 </span>
-                <span className="g-ai-typing-text">Consultando datos…</span>
+                <span className="g-ai-typing-text">{t("ai.querying", "Consulting data...")}</span>
               </div>
             </div>
           )}
@@ -219,19 +224,19 @@ export default function AIAgent() {
         {/* Composer */}
         <div className="glass-strong g-ai-composer">
           <div className="g-ai-composer-row">
-            <button type="button" title="Adjuntar archivo" className="g-btn g-btn-ghost g-ai-composer-btn-attach">
+            <button type="button" title={t("ai.attach_file", "Attach file")} className="g-btn g-btn-ghost g-ai-composer-btn-attach">
               <Plus size={16} />
             </button>
             <input
               className="g-ai-composer-placeholder bg-transparent border-none outline-none"
-              placeholder="Pregunta al agente sobre ventas, inventario, clientes…"
+              placeholder={t("ai.ask_placeholder", "Ask the AI agent about sales, inventory, customers...")}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send(input))}
             />
             <button
               type="button"
-              title="Enviar mensaje"
+              title={t("ai.send", "Send message")}
               className="g-btn g-btn-primary g-ai-composer-btn-send"
               onClick={() => send(input)}
               disabled={!input.trim() || typing}
@@ -240,7 +245,7 @@ export default function AIAgent() {
             </button>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {SUGGESTIONS.map((s, i) => (
+            {suggestions.map((s, i) => (
               <button
                 key={i} type="button"
                 className="pill pill-ghost pill-sm"
@@ -257,8 +262,8 @@ export default function AIAgent() {
       <div className="g-ai-side">
         {/* Data sources */}
         <div className="glass g-ai-sources">
-          <div className="h-display g-ai-section-title">Fuentes conectadas</div>
-          {DATA_SOURCES.map(({ icon: Icon, label, sub }, i) => (
+          <div className="h-display g-ai-section-title">{t("ai.sources_title", "Connected Sources")}</div>
+          {dataSources.map(({ icon: Icon, label, sub }, i) => (
             <div key={i} className="g-ai-source-row">
               <div className="g-ai-source-icon">
                 <Icon size={14} />
@@ -274,10 +279,10 @@ export default function AIAgent() {
 
         {/* Recent actions */}
         <div className="glass g-ai-actions-panel">
-          <div className="h-display g-ai-section-title">Acciones recientes</div>
+          <div className="h-display g-ai-section-title">{t("ai.recent_actions", "Recent Actions")}</div>
           {[
-            { l: "Reporte semanal enviado", s: "Hoy · 4 destinatarios", ok: true },
-            { l: "Alerta de stock crítico",  s: "2 SKUs · Sucursal Sur",  ok: false },
+            { l: t("ai.action_item_1", "Weekly report sent"), s: t("ai.action_item_1_sub", "Today · 4 recipients"), ok: true },
+            { l: t("ai.action_item_2", "Critical stock alert"), s: t("ai.action_item_2_sub", "2 SKUs · Downtown Branch"),  ok: false },
           ].map((r, i) => (
             <div key={i} className="glass-thin g-ai-action-row">
               <span className={cn("dot", r.ok ? "dot-ok" : "dot-warn")} />
@@ -290,7 +295,7 @@ export default function AIAgent() {
         </div>
 
         <div className="glass-thin g-ai-privacy-note">
-          El agente accede solo a datos de tu tenant. Las consultas se registran en <code>audit_logs</code> y nunca salen de tu instancia.
+          {t("ai.privacy_note", "The agent accesses only your organization's data. Queries are safely recorded in audit_logs.")}
         </div>
       </div>
     </div>

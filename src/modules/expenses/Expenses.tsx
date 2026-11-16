@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,14 +44,9 @@ const emptyExpense: ExpenseForm = {
   expense_date: new Date().toISOString().slice(0, 10),
 };
 
-const PAY_METHODS = [
-  { id: "cash",     label: "Efectivo" },
-  { id: "card",     label: "Tarjeta" },
-  { id: "transfer", label: "Transferencia" },
-];
-
 export default function Expenses() {
   const { tenantId, branchId } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [tab, setTab] = useState("expenses");
   const [expenseOpen, setExpenseOpen] = useState(false);
@@ -58,6 +54,12 @@ export default function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>(emptyExpense);
   const [catName, setCatName] = useState("");
+
+  const payMethods = [
+    { id: "cash",     label: t("pos.pay_cash", "Cash") },
+    { id: "card",     label: t("pos.pay_card", "Card") },
+    { id: "transfer", label: t("pos.pay_transfer", "Transfer") },
+  ];
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["expense-categories", tenantId],
@@ -111,13 +113,13 @@ export default function Expenses() {
       }
     },
     onSuccess: () => {
-      toast.success(editingExpense ? "Gasto actualizado" : "Gasto registrado");
+      toast.success(editingExpense ? t("expenses.updated", "Expense updated") : t("expenses.created_toast", "Expense recorded successfully"));
       qc.invalidateQueries({ queryKey: ["expenses"] });
       setExpenseOpen(false);
       setEditingExpense(null);
       setExpenseForm(emptyExpense);
     },
-    onError: (e: any) => toast.error(e.message ?? "Error al guardar"),
+    onError: (e: any) => toast.error(e.message ?? "Error"),
   });
 
   const removeExpense = useMutation({
@@ -126,7 +128,7 @@ export default function Expenses() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Gasto eliminado");
+      toast.success(t("expenses.deleted", "Expense deleted"));
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Error"),
@@ -140,7 +142,7 @@ export default function Expenses() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Categoría creada");
+      toast.success(t("categories.created", "Category created"));
       qc.invalidateQueries({ queryKey: ["expense-categories"] });
       setCatOpen(false);
       setCatName("");
@@ -171,19 +173,19 @@ export default function Expenses() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div className="g-page-hd">
-          <div className="g-page-hd-eyebrow">FINANZAS · GASTOS</div>
-          <div className="h-display g-page-title">Gastos</div>
-          <div className="g-page-hd-meta">Este mes: {formatCurrency(totalMonth)}</div>
+          <div className="g-page-hd-eyebrow">{t("expenses.eyebrow", "BUSINESS · EXPENSES")}</div>
+          <div className="h-display g-page-title">{t("expenses.title", "Expenses")}</div>
+          <div className="g-page-hd-meta">{t("dashboard.this_month", "This Month")}: {formatCurrency(totalMonth)}</div>
         </div>
         <button type="button" className="g-btn g-btn-primary" onClick={openCreate}>
-          <Plus size={16} className="mr-1" />Registrar gasto
+          <Plus size={16} className="mr-1" />{t("expenses.new_expense", "New Expense")}
         </button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="expenses">Gastos</TabsTrigger>
-          <TabsTrigger value="categories">Categorías</TabsTrigger>
+          <TabsTrigger value="expenses">{t("expenses.title", "Expenses")}</TabsTrigger>
+          <TabsTrigger value="categories">{t("categories.title", "Categories")}</TabsTrigger>
         </TabsList>
 
         {/* ── Expenses tab ── */}
@@ -191,17 +193,17 @@ export default function Expenses() {
           {expenses.length === 0 ? (
             <EmptyState
               icon={TrendingDown}
-              title="Sin gastos registrados"
-              description="Registra arriendo, nómina, servicios y otros gastos operativos."
+              title={t("expenses.empty_title", "No expenses recorded")}
+              description={t("expenses.empty_desc", "Record petty cash outflows and operational expenses to keep accurate records.")}
             />
           ) : (
             <div className="glass rounded-2xl overflow-hidden">
               <div className="g-exp-head">
-                <span>Fecha</span>
-                <span>Descripción</span>
-                <span>Categoría</span>
-                <span>Método</span>
-                <span className="text-right">Monto</span>
+                <span>{t("expenses.col_date", "Date")}</span>
+                <span>{t("expenses.col_description", "Description")}</span>
+                <span>{t("expenses.col_category", "Category")}</span>
+                <span>{t("expenses.col_payment", "Payment Method")}</span>
+                <span className="text-right">{t("expenses.col_amount", "Amount")}</span>
                 <span />
               </div>
               {expenses.map((e) => (
@@ -215,17 +217,17 @@ export default function Expenses() {
                         {e.expense_categories.name}
                       </span>
                     ) : (
-                      <span className="h-meta">Sin categoría</span>
+                      <span className="h-meta">{t("common.uncategorized", "Uncategorized")}</span>
                     )}
                   </span>
                   <span className="g-exp-pay">
-                    {PAY_METHODS.find((m) => m.id === e.payment_method)?.label ?? e.payment_method}
+                    {payMethods.find((m) => m.id === e.payment_method)?.label ?? e.payment_method}
                   </span>
                   <span className="g-exp-amt">{formatCurrency(Number(e.amount))}</span>
                   <span className="g-exp-actions">
                     <button
                       type="button"
-                      title="Editar gasto"
+                      title={t("common.edit", "Edit")}
                       className="g-exp-icon-btn"
                       onClick={() => openEdit(e)}
                     >
@@ -233,9 +235,9 @@ export default function Expenses() {
                     </button>
                     <button
                       type="button"
-                      title="Eliminar gasto"
+                      title={t("common.delete", "Delete")}
                       className="g-exp-icon-btn g-exp-icon-btn-del"
-                      onClick={() => { if (confirm("¿Eliminar gasto?")) removeExpense.mutate(e.id); }}
+                      onClick={() => { if (confirm(t("common.confirm", "Confirm") + "?")) removeExpense.mutate(e.id); }}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -250,19 +252,19 @@ export default function Expenses() {
         <TabsContent value="categories" className="mt-4">
           <div className="flex gap-2 mb-4">
             <button type="button" className="g-btn g-btn-ghost" onClick={() => setCatOpen(true)}>
-              <Plus size={16} className="mr-1" />Nueva categoría
+              <Plus size={16} className="mr-1" />{t("categories.new", "New Category")}
             </button>
           </div>
           {categories.length === 0 ? (
             <EmptyState
               icon={Tag}
-              title="Sin categorías"
-              description="Crea categorías como Arriendo, Nómina, Servicios, etc."
+              title={t("categories.empty_title", "No categories")}
+              description={t("categories.empty_desc", "Create categories such as Rent, Payroll, Utilities, etc.")}
             />
           ) : (
             <div className="glass rounded-2xl overflow-hidden">
               <div className="g-cat-head">
-                <span>Nombre</span>
+                <span>{t("categories.name", "Name")}</span>
               </div>
               {categories.map((c) => (
                 <div key={c.id} className="g-cat-row">
@@ -284,12 +286,12 @@ export default function Expenses() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingExpense ? "Editar gasto" : "Registrar gasto"}</DialogTitle>
+            <DialogTitle>{editingExpense ? t("expenses.edit_title", "Edit Expense") : t("expenses.dialog_title", "Record Expense")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Monto *</Label>
+                <Label>{t("expenses.lbl_amount", "Amount *")}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -299,7 +301,7 @@ export default function Expenses() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Fecha *</Label>
+                <Label>{t("expenses.col_date", "Date *")}</Label>
                 <Input
                   type="date"
                   value={expenseForm.expense_date}
@@ -308,35 +310,35 @@ export default function Expenses() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Categoría</Label>
+              <Label>{t("expenses.lbl_category", "Category")}</Label>
               <Select
                 value={expenseForm.category_id}
                 onValueChange={(v) => setExpenseForm((f) => ({ ...f, category_id: v }))}
               >
-                <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("expenses.category_all", "Select Category")} /></SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Método de pago</Label>
+              <Label>{t("expenses.lbl_payment", "Payment Method")}</Label>
               <Select
                 value={expenseForm.payment_method}
                 onValueChange={(v) => setExpenseForm((f) => ({ ...f, payment_method: v }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PAY_METHODS.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+                  {payMethods.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Descripción</Label>
+              <Label>{t("expenses.lbl_description", "Description")}</Label>
               <Input
                 value={expenseForm.description}
                 onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Ej: Arriendo local, pago de servicios..."
+                placeholder="e.g. Store rent, internet bill..."
               />
             </div>
             <button
@@ -345,7 +347,7 @@ export default function Expenses() {
               disabled={!expenseForm.amount || saveExpense.isPending}
               onClick={() => saveExpense.mutate(expenseForm)}
             >
-              {saveExpense.isPending ? "Guardando..." : editingExpense ? "Guardar cambios" : "Registrar gasto"}
+              {saveExpense.isPending ? t("suppliers.btn_saving", "Saving...") : editingExpense ? t("common.save", "Save Changes") : t("expenses.btn_record", "Save Expense")}
             </button>
           </div>
         </DialogContent>
@@ -354,14 +356,14 @@ export default function Expenses() {
       {/* Category dialog */}
       <Dialog open={catOpen} onOpenChange={setCatOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Nueva categoría</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("categories.new", "New Category")}</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Nombre *</Label>
+              <Label>{t("categories.name", "Name *")}</Label>
               <Input
                 value={catName}
                 onChange={(e) => setCatName(e.target.value)}
-                placeholder="Ej: Arriendo, Nómina, Servicios..."
+                placeholder="e.g. Rent, Utilities, Supplies..."
               />
             </div>
             <button
@@ -370,7 +372,7 @@ export default function Expenses() {
               disabled={!catName.trim() || saveCat.isPending}
               onClick={() => saveCat.mutate()}
             >
-              {saveCat.isPending ? "Guardando..." : "Crear categoría"}
+              {saveCat.isPending ? t("suppliers.btn_saving", "Saving...") : t("categories.create", "Create Category")}
             </button>
           </div>
         </DialogContent>

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { useWhatsAppNotifs } from "@/contexts/WhatsAppNotifsContext";
+import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,19 +19,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { canAccessRoles } from "@/lib/roles";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  open: { label: "Abierta", className: "bg-success text-success-foreground" },
-  handoff: { label: "Con asesor", className: "bg-yellow-500 text-white" },
-  closed: { label: "Cerrada", className: "bg-muted text-muted-foreground" },
+  open: { label: "Open", className: "bg-success text-success-foreground" },
+  handoff: { label: "With agent", className: "bg-yellow-500 text-white" },
+  closed: { label: "Closed", className: "bg-muted text-muted-foreground" },
 };
 
 export default function WhatsAppInbox() {
   const { tenantId, branchId, roles } = useTenantContext();
   const { clearUnread } = useWhatsAppNotifs();
+  const { t } = useI18n();
   const qc = useQueryClient();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -175,7 +176,7 @@ export default function WhatsAppInbox() {
     if (!selectedId) return;
     await supabase.from("ai_conversations").update({ status: "open", handoff_reason: null }).eq("id", selectedId);
     qc.invalidateQueries({ queryKey: ["wa-conversations", tenantId] });
-    toast.success("El bot retomará la conversación");
+    toast.success(t("wa.bot_resumed", "AI bot will resume handling the conversation"));
   };
 
   const insertProductText = (product: any) => {
@@ -193,7 +194,7 @@ export default function WhatsAppInbox() {
   const askAiSuggestion = async () => {
     if (!selectedId) return;
     const lastInbound = [...messages].reverse().find((m: any) => m.direction === "inbound");
-    if (!lastInbound) { toast.error("No hay mensaje del cliente para analizar"); return; }
+    if (!lastInbound) { toast.error(t("wa.no_inbound_msg", "No incoming customer message to analyze")); return; }
 
     setAiSuggesting(true);
     try {
@@ -355,16 +356,16 @@ export default function WhatsAppInbox() {
               <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                    <Package className="h-3 w-3" /> Producto
+                    <Package className="h-3 w-3" /> {t("common.product", "Product")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-80 p-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Buscar producto</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t("wa.search_product", "Search product")}</p>
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       className="pl-7 h-8 text-sm"
-                      placeholder="Nombre, SKU…"
+                      placeholder={t("wa.product_search_ph", "Name, SKU...")}
                       value={productQuery}
                       onChange={(e) => setProductQuery(e.target.value)}
                       autoFocus
@@ -373,7 +374,7 @@ export default function WhatsAppInbox() {
                   <div className="max-h-48 overflow-y-auto space-y-1">
                     {searchingProducts && (
                       <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Buscando…
+                        <Loader2 className="h-3 w-3 animate-spin" /> {t("common.searching", "Searching...")}
                       </div>
                     )}
                     {productResults.map((p: any) => (
@@ -408,14 +409,14 @@ export default function WhatsAppInbox() {
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-72 p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Respuestas rápidas</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t("wa.quick_replies", "Quick Replies")}</p>
                     {isAdmin && (
                       <Button
                         size="icon"
                         variant="ghost"
                         className="h-6 w-6"
                         onClick={() => { setQuickRepliesOpen(false); setManageQrOpen(true); }}
-                        title="Gestionar respuestas"
+                        title={t("wa.manage_replies", "Manage quick replies")}
                       >
                         <Settings2 className="h-3.5 w-3.5" />
                       </Button>
@@ -435,7 +436,7 @@ export default function WhatsAppInbox() {
                     ))}
                     {quickReplies.length === 0 && (
                       <p className="text-xs text-muted-foreground py-2 text-center">
-                        {isAdmin ? "Sin respuestas aún — usa el ⚙ para crear" : "Sin respuestas preGuardadas"}
+                        {isAdmin ? t("wa.no_quick_replies_admin", "No quick replies yet — click ⚙ to create") : t("wa.no_quick_replies", "No quick replies configured")}
                       </p>
                     )}
                   </div>
@@ -449,19 +450,19 @@ export default function WhatsAppInbox() {
                 className="h-7 text-xs gap-1"
                 onClick={askAiSuggestion}
                 disabled={aiSuggesting}
-                title="Genera una sugerencia de respuesta basada en la conversación"
+                title={t("wa.ai_suggest_title", "Generate an AI reply suggestion based on conversation history")}
               >
                 {aiSuggesting
                   ? <Loader2 className="h-3 w-3 animate-spin" />
                   : <Sparkles className="h-3 w-3" />}
-                {aiSuggesting ? "Pensando…" : "¿Cómo respondería?"}
+                {aiSuggesting ? t("common.thinking", "Thinking…") : t("wa.how_to_reply", "Suggest Reply")}
               </Button>
             </div>
 
             {/* Reply input */}
             <div className="flex gap-2">
               <Input
-                placeholder="Escribe una respuesta…"
+                placeholder={t("wa.type_reply_ph", "Type a response…")}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
@@ -477,7 +478,7 @@ export default function WhatsAppInbox() {
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="text-center space-y-2">
             <MessageCircle className="h-12 w-12 mx-auto opacity-20" />
-            <p>Selecciona una conversación</p>
+            <p>{t("wa.select_conversation", "Select a conversation")}</p>
           </div>
         </div>
       )}
@@ -486,7 +487,7 @@ export default function WhatsAppInbox() {
       <Dialog open={manageQrOpen} onOpenChange={setManageQrOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Gestionar respuestas rápidas</DialogTitle>
+            <DialogTitle>{t("wa.manage_quick_replies", "Manage Quick Replies")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Existing */}
@@ -508,20 +509,20 @@ export default function WhatsAppInbox() {
                 </div>
               ))}
               {quickReplies.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Sin respuestas aún</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t("wa.no_replies_yet", "No replies yet")}</p>
               )}
             </div>
 
             {/* New reply form */}
             <div className="border-t pt-4 space-y-2">
-              <p className="text-sm font-medium">Nueva respuesta</p>
+              <p className="text-sm font-medium">{t("wa.new_reply", "New Reply")}</p>
               <Input
-                placeholder="Título corto (ej. Saludo, Horarios…)"
+                placeholder={t("wa.reply_title_ph", "Short title (e.g. Greeting, Hours...)")}
                 value={newQrTitle}
                 onChange={(e) => setNewQrTitle(e.target.value)}
               />
               <Textarea
-                placeholder="Texto del mensaje…"
+                placeholder={t("wa.reply_body_ph", "Message text...")}
                 value={newQrBody}
                 onChange={(e) => setNewQrBody(e.target.value)}
                 rows={3}
@@ -532,7 +533,7 @@ export default function WhatsAppInbox() {
                 disabled={!newQrTitle.trim() || !newQrBody.trim()}
                 className="gap-1"
               >
-                <Plus className="h-3.5 w-3.5" /> Guardar
+                <Plus className="h-3.5 w-3.5" /> {t("common.save", "Save")}
               </Button>
             </div>
           </div>

@@ -1,19 +1,24 @@
 import type { Database } from "@/integrations/supabase/types";
+import { t } from "./i18n";
 
 export type SalesChannel = Database["public"]["Enums"]["sales_channel"];
 
 export const CHANNELS: { id: SalesChannel; label: string; short: string }[] = [
-  { id: "pos", label: "Presencial", short: "POS" },
-  { id: "tables", label: "Mesas / Comandas", short: "Mesas" },
+  { id: "pos", label: "In-Person / POS", short: "POS" },
+  { id: "tables", label: "Tables & Floor", short: "Tables" },
   { id: "rappi", label: "Rappi / Digital", short: "Rappi" },
   { id: "whatsapp", label: "WhatsApp", short: "WA" },
   { id: "didi", label: "Didi Food", short: "Didi" },
   { id: "uber", label: "Uber Eats", short: "Uber" },
-  { id: "delivery", label: "Domicilio propio", short: "Domicilio" },
+  { id: "delivery", label: "Direct Delivery", short: "Delivery" },
 ];
 
-export const channelLabel = (c: SalesChannel) =>
-  CHANNELS.find((x) => x.id === c)?.label ?? c;
+export const channelLabel = (c: SalesChannel) => {
+  const fallback = CHANNELS.find((x) => x.id === c)?.label ?? c;
+  return t(`channel.${c}`, fallback);
+};
+
+export const getChannelLabel = channelLabel;
 
 export type ChannelPriceRow = {
   product_id: string;

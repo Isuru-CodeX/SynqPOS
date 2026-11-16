@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ const statusIcon = (s: DiagStep["status"]) => {
 
 export default function WhatsAppSettings() {
   const { tenantId, branchId, branches } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [selectedBranch, setSelectedBranch] = useState(branchId ?? "");
   const [instance, setInstance] = useState("");
@@ -75,7 +77,7 @@ export default function WhatsAppSettings() {
 
   // ── Save ──────────────────────────────────────────────────
   const save = async () => {
-    if (!instance.trim()) return toast.error("Ingresa el nombre de instancia de Evolution API");
+    if (!instance.trim()) return toast.error(t("wa_settings.instance_required", "Enter Evolution API instance name"));
     if (!selectedBranch || !tenantId) return;
     setSaving(true);
     try {
@@ -92,7 +94,7 @@ export default function WhatsAppSettings() {
         ? await supabase.from("ai_channel_configs").update(payload).eq("id", config.id)
         : await supabase.from("ai_channel_configs").insert(payload);
       if (error) throw error;
-      toast.success("Configuración guardada");
+      toast.success(t("wa_settings.config_saved", "Configuration saved"));
       qc.invalidateQueries({ queryKey: ["ai-channel-config"] });
     } catch (e: any) {
       toast.error(e.message);
@@ -103,7 +105,7 @@ export default function WhatsAppSettings() {
 
   const copyWebhook = async () => {
     await navigator.clipboard.writeText(EVO_WEBHOOK);
-    toast.success("URL del webhook copiada");
+    toast.success(t("wa_settings.webhook_copied", "Webhook URL copied"));
   };
 
   // ── Connection test ───────────────────────────────────────
@@ -111,11 +113,11 @@ export default function WhatsAppSettings() {
     setTesting(true);
     setDiagDone(false);
     const steps: DiagStep[] = [
-      { label: "Configuración en DB", status: "pending" },
-      { label: "Edge function evolution-webhook", status: "pending" },
-      { label: "Edge function send-whatsapp-message", status: "pending" },
-      { label: "Evolution API reachable (fetch desde cliente)", status: "pending" },
-      { label: "Instancia Evolution API responde", status: "pending" },
+      { label: t("wa_settings.step_db", "Database configuration"), status: "pending" },
+      { label: t("wa_settings.step_hook", "Edge function evolution-webhook"), status: "pending" },
+      { label: t("wa_settings.step_send", "Edge function send-whatsapp-message"), status: "pending" },
+      { label: t("wa_settings.step_reachable", "Evolution API reachable (client fetch)"), status: "pending" },
+      { label: t("wa_settings.step_inst", "Evolution API instance responding"), status: "pending" },
     ];
     setDiagSteps([...steps]);
 
@@ -135,13 +137,13 @@ export default function WhatsAppSettings() {
         .maybeSingle();
 
       if (!cfgCheck) {
-        update(0, { status: "fail", detail: "No hay configuración activa de WhatsApp para esta sucursal. Guarda la configuración primero." });
+        update(0, { status: "fail", detail: t("wa_settings.err_no_active", "No active WhatsApp config for this branch. Please save config first.") });
       } else {
         const evoInst = (cfgCheck.config as any)?.evolution_instance;
         if (!evoInst) {
-          update(0, { status: "warn", detail: "Configuración encontrada pero sin nombre de instancia Evolution." });
+          update(0, { status: "warn", detail: t("wa_settings.err_no_inst_name", "Config found but missing Evolution instance name.") });
         } else {
-          update(0, { status: "ok", detail: `Instancia: "${evoInst}" | Teléfono: ${cfgCheck.phone_number ?? "no especificado"}` });
+          update(0, { status: "ok", detail: `${t("wa_settings.instance", "Instance")}: "${evoInst}" | ${t("wa_settings.phone", "Phone")}: ${cfgCheck.phone_number ?? t("common.none", "none")}` });
         }
       }
     } catch (e: any) {
@@ -156,17 +158,16 @@ export default function WhatsAppSettings() {
         body: JSON.stringify({ event: "PING_TEST", instance: "__ping__", data: {} }),
       });
       const body = await r.json().catch(() => ({}));
-      // 200 ok:true/ignored OR 404 (no config for __ping__) = function is UP
       if (r.status === 200 || r.status === 404) {
-        update(1, { status: "ok", detail: `HTTP ${r.status} – función activa` });
+        update(1, { status: "ok", detail: `HTTP ${r.status} – ${t("wa_settings.fn_active", "function active")}` });
       } else {
         update(1, { status: "warn", detail: `HTTP ${r.status}: ${JSON.stringify(body)}` });
       }
     } catch (e: any) {
-      update(1, { status: "fail", detail: `No se pudo alcanzar: ${e.message}` });
+      update(1, { status: "fail", detail: `${t("wa_settings.unreachable", "Unreachable")}: ${e.message}` });
     }
 
-    // Step 2: Ping send-whatsapp-message (sin auth → esperamos 401 del gateway)
+    // Step 2: Ping send-whatsapp-message
     try {
       const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp-message`, {
         method: "POST",
@@ -174,21 +175,20 @@ export default function WhatsAppSettings() {
         body: JSON.stringify({}),
       });
       if (r.status === 401) {
-        update(2, { status: "ok", detail: "HTTP 401 esperado – función activa y protegida correctamente" });
+        update(2, { status: "ok", detail: t("wa_settings.expected_401", "Expected HTTP 401 – function active and protected") });
       } else {
         const respBody = await r.json().catch(() => ({}));
         update(2, { status: "warn", detail: `HTTP ${r.status}: ${JSON.stringify(respBody)}` });
       }
     } catch (e: any) {
-      update(2, { status: "fail", detail: `No se pudo alcanzar: ${e.message}` });
+      update(2, { status: "fail", detail: `${t("wa_settings.unreachable", "Unreachable")}: ${e.message}` });
     }
 
-    // Step 3 & 4: Verificar secrets de Evolution API vía edge function autenticada
+    // Step 3 & 4
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Sin sesión activa");
+      if (!session?.access_token) throw new Error("No active session");
 
-      // Enviamos __connection_test junto con tenant/branch para pasar la validación de roles
       const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp-message`, {
         method: "POST",
         headers: {
@@ -205,31 +205,31 @@ export default function WhatsAppSettings() {
 
       if (r.status === 200 && respBody?.diagnostics) {
         const diag = respBody.diagnostics;
-        update(3, { status: "ok", detail: "Autenticación JWT ✓ | Permisos de rol verificados" });
+        update(3, { status: "ok", detail: t("wa_settings.auth_ok", "JWT Auth ✓ | Role permissions verified") });
         const evoUrlOk = diag.evolution_api_url_set;
         const evoKeyOk = diag.evolution_api_key_set;
         if (evoUrlOk && evoKeyOk) {
-          update(4, { status: "ok", detail: "EVOLUTION_API_URL y EVOLUTION_API_KEY configurados en secrets" });
+          update(4, { status: "ok", detail: t("wa_settings.secrets_ok", "EVOLUTION_API_URL and EVOLUTION_API_KEY configured in secrets") });
         } else {
-          const missing = [!evoUrlOk && "EVOLUTION_API_URL", !evoKeyOk && "EVOLUTION_API_KEY"].filter(Boolean).join(" y ");
+          const missing = [!evoUrlOk && "EVOLUTION_API_URL", !evoKeyOk && "EVOLUTION_API_KEY"].filter(Boolean).join(" & ");
           update(4, {
             status: "fail",
-            detail: `Faltan secretos: ${missing}. Ve a Supabase → Edge Functions → Secrets.`,
+            detail: `${t("wa_settings.missing_secrets", "Missing secrets")}: ${missing}.`,
           });
         }
       } else if (r.status === 401) {
-        update(3, { status: "fail", detail: "JWT rechazado – verifica que el usuario tenga sesión activa" });
-        update(4, { status: "warn", detail: "Requiere autenticación válida para continuar" });
+        update(3, { status: "fail", detail: t("wa_settings.jwt_rejected", "JWT rejected – verify user has active session") });
+        update(4, { status: "warn", detail: t("wa_settings.requires_auth", "Requires valid authentication to continue") });
       } else if (r.status === 403) {
-        update(3, { status: "fail", detail: "Sin permisos (Forbidden) – verifica que tu usuario tenga rol owner/admin/manager en esta sucursal" });
-        update(4, { status: "warn", detail: "Requiere rol adecuado para continuar" });
+        update(3, { status: "fail", detail: t("wa_settings.forbidden", "Forbidden – verify owner/admin/manager role") });
+        update(4, { status: "warn", detail: t("wa_settings.requires_role", "Requires adequate role to continue") });
       } else {
         update(3, { status: "warn", detail: `HTTP ${r.status}: ${JSON.stringify(respBody)}` });
-        update(4, { status: "warn", detail: "Resultado inesperado" });
+        update(4, { status: "warn", detail: t("wa_settings.unexpected", "Unexpected result") });
       }
     } catch (e: any) {
       update(3, { status: "fail", detail: e.message });
-      update(4, { status: "warn", detail: "No se pudo completar la prueba" });
+      update(4, { status: "warn", detail: t("wa_settings.could_not_complete", "Could not complete test") });
     }
 
     setDiagDone(true);
@@ -243,15 +243,15 @@ export default function WhatsAppSettings() {
       <div className="glass p-5 space-y-3">
         <div className="flex items-center gap-2 font-semibold">
           <Webhook className="h-4 w-4 text-primary" />
-          URL del Webhook (Evolution API)
+          {t("wa_settings.webhook_title", "Webhook URL (Evolution API)")}
         </div>
         <p className="text-sm text-muted-foreground">
-          Configura esta URL en tu instancia de Evolution API como destino de eventos{" "}
+          {t("wa_settings.webhook_desc", "Configure this URL in your Evolution API instance as the target for event")}{" "}
           <code className="bg-muted px-1 py-0.5 rounded text-xs">MESSAGES_UPSERT</code>.
         </p>
         <div className="flex gap-2">
           <Input readOnly value={EVO_WEBHOOK} className="font-mono text-xs" />
-          <Button variant="outline" size="icon" onClick={copyWebhook} title="Copiar URL">
+          <Button variant="outline" size="icon" onClick={copyWebhook} title={t("common.copy", "Copy URL")}>
             <Copy className="h-4 w-4" />
           </Button>
         </div>
@@ -261,19 +261,19 @@ export default function WhatsAppSettings() {
       <div className="glass p-5 space-y-4">
         <div className="flex items-center gap-2 font-semibold">
           <Bot className="h-4 w-4 text-primary" />
-          Agente IA WhatsApp
+          {t("wa_settings.agent_title", "WhatsApp AI Agent")}
           {config && (
             <Badge className={config.is_active ? "bg-success text-success-foreground" : "bg-muted"}>
-              {config.is_active ? "Activo" : "Inactivo"}
+              {config.is_active ? t("common.active", "Active") : t("common.inactive", "Inactive")}
             </Badge>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Sucursal</Label>
+          <Label>{t("common.branch", "Branch")}</Label>
           <Select value={selectedBranch} onValueChange={setSelectedBranch}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona sucursal…" />
+              <SelectValue placeholder={t("wa_settings.select_branch", "Select branch...")} />
             </SelectTrigger>
             <SelectContent>
               {(branches ?? []).map((b: any) => (
@@ -285,26 +285,26 @@ export default function WhatsAppSettings() {
 
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground text-sm py-4">
-            <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("common.loading", "Loading...")}
           </div>
         ) : (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Nombre de instancia (Evolution API)</Label>
+              <Label>{t("wa_settings.instance_name", "Instance name (Evolution API)")}</Label>
               <Input
-                placeholder="ej. pos-negocio-barra"
+                placeholder="e.g. synq-main-store"
                 value={instance}
                 onChange={e => setInstance(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Debe coincidir exactamente con el nombre de la instancia en tu Evolution API.
+                {t("wa_settings.instance_hint", "Must match exactly the instance name configured in Evolution API.")}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Número WhatsApp asociado (opcional)</Label>
+              <Label>{t("wa_settings.phone_number", "Associated WhatsApp Number (optional)")}</Label>
               <Input
-                placeholder="57300XXXXXXX"
+                placeholder="15551234567"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
               />
@@ -312,13 +312,13 @@ export default function WhatsAppSettings() {
 
             <div className="flex items-center gap-3">
               <Switch checked={isActive} onCheckedChange={setIsActive} id="wa-active" />
-              <Label htmlFor="wa-active">Agente activo</Label>
+              <Label htmlFor="wa-active">{t("wa_settings.agent_active", "Agent active")}</Label>
             </div>
 
             <div className="flex gap-2 flex-wrap">
               <Button onClick={save} disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Guardar configuración
+                {t("common.save", "Save configuration")}
               </Button>
               <Button variant="outline" onClick={runDiagnostics} disabled={testing || !selectedBranch}>
                 {testing
@@ -327,7 +327,7 @@ export default function WhatsAppSettings() {
                     ? <RefreshCw className="h-4 w-4 mr-2" />
                     : <Wifi className="h-4 w-4 mr-2" />
                 }
-                {diagDone ? "Repetir diagnóstico" : "Probar conexión"}
+                {diagDone ? t("wa_settings.repeat_diag", "Rerun diagnostics") : t("wa_settings.test_conn", "Test connection")}
               </Button>
             </div>
           </div>
@@ -340,11 +340,11 @@ export default function WhatsAppSettings() {
           <div className="flex items-center gap-2 font-semibold">
             {diagDone
               ? diagSteps.every(s => s.status === "ok")
-                ? <><CheckCircle2 className="h-4 w-4 text-green-500" /> Todo en orden</>
+                ? <><CheckCircle2 className="h-4 w-4 text-green-500" /> {t("wa_settings.all_good", "All systems operational")}</>
                 : diagSteps.some(s => s.status === "fail")
-                  ? <><WifiOff className="h-4 w-4 text-red-500" /> Se encontraron problemas</>
-                  : <><AlertCircle className="h-4 w-4 text-yellow-500" /> Advertencias detectadas</>
-              : <><Loader2 className="h-4 w-4 animate-spin text-primary" /> Ejecutando diagnóstico…</>
+                  ? <><WifiOff className="h-4 w-4 text-red-500" /> {t("wa_settings.issues_found", "Issues found")}</>
+                  : <><AlertCircle className="h-4 w-4 text-yellow-500" /> {t("wa_settings.warnings_found", "Warnings detected")}</>
+              : <><Loader2 className="h-4 w-4 animate-spin text-primary" /> {t("wa_settings.running_diag", "Running diagnostics...")}</>
             }
           </div>
 
@@ -370,15 +370,15 @@ export default function WhatsAppSettings() {
 
           {diagDone && diagSteps.some(s => s.status === "fail" || s.status === "warn") && (
             <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1.5">
-              <p className="font-semibold text-foreground">Acciones recomendadas:</p>
+              <p className="font-semibold text-foreground">{t("wa_settings.rec_actions", "Recommended actions:")}</p>
               {diagSteps[0]?.status !== "ok" && (
-                <p>• <strong>Configuración:</strong> Llena el nombre de instancia, guarda y activa el agente.</p>
+                <p>• <strong>{t("wa_settings.config", "Configuration")}:</strong> {t("wa_settings.rec_cfg", "Fill the instance name, save, and activate the agent.")}</p>
               )}
               {(diagSteps[3]?.status !== "ok") && (
-                <p>• <strong>Secrets de Edge Function:</strong> Ve a Supabase Dashboard → Edge Functions → send-whatsapp-message → Secrets y agrega <code>EVOLUTION_API_URL</code> y <code>EVOLUTION_API_KEY</code>.</p>
+                <p>• <strong>{t("wa_settings.secrets", "Edge Function Secrets")}:</strong> {t("wa_settings.rec_secrets", "Ensure EVOLUTION_API_URL and EVOLUTION_API_KEY are configured in Supabase secrets.")}</p>
               )}
               {(diagSteps[4]?.status === "warn") && (
-                <p>• <strong>Evolution API:</strong> Verifica que tu instancia <code>{instance || "?"}</code> esté conectada a WhatsApp (QR escaneado) y que el webhook esté configurado con la URL de arriba.</p>
+                <p>• <strong>Evolution API:</strong> {t("wa_settings.rec_evo", `Verify that instance "${instance || "?"}" is connected (QR scanned) and webhook URL is configured.`)}</p>
               )}
             </div>
           )}
@@ -387,14 +387,14 @@ export default function WhatsAppSettings() {
 
       {/* Instrucciones */}
       <div className="glass p-5 space-y-2 bg-muted/30">
-        <p className="text-sm font-medium">Cómo conectar Evolution API</p>
+        <p className="text-sm font-medium">{t("wa_settings.instructions_title", "How to connect Evolution API")}</p>
         <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-          <li>Crea una instancia en tu Evolution API con el nombre exacto que pusiste arriba.</li>
-          <li>En la instancia, ve a <strong>Webhooks</strong> y pega la URL de arriba.</li>
-          <li>Activa el evento <strong>MESSAGES_UPSERT</strong>.</li>
-          <li>Conecta la instancia a WhatsApp escaneando el QR.</li>
-          <li>Activa el agente con el toggle de arriba y guarda.</li>
-          <li>En Supabase → Edge Functions → Secrets, agrega <code className="bg-muted px-1 rounded">EVOLUTION_API_URL</code> y <code className="bg-muted px-1 rounded">EVOLUTION_API_KEY</code>.</li>
+          <li>{t("wa_settings.step1", "Create an instance in your Evolution API with the exact instance name entered above.")}</li>
+          <li>{t("wa_settings.step2", "In that instance, go to Webhooks and paste the webhook URL from above.")}</li>
+          <li>{t("wa_settings.step3", "Enable the MESSAGES_UPSERT event.")}</li>
+          <li>{t("wa_settings.step4", "Connect WhatsApp by scanning the QR code in Evolution API.")}</li>
+          <li>{t("wa_settings.step5", "Toggle Agent active above and click Save.")}</li>
+          <li>{t("wa_settings.step6", "In Supabase Secrets, make sure EVOLUTION_API_URL and EVOLUTION_API_KEY are set.")}</li>
         </ol>
       </div>
     </div>

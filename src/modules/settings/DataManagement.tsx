@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export function DataManagement() {
   const { tenantId, branchId } = useTenantContext();
+  const { t } = useI18n();
   const { centers, defaultCenter } = useInventoryCenters();
   const [loading, setLoading] = useState(false);
   const [selectedCenterId, setSelectedCenterId] = useState<string>("");
@@ -33,10 +35,10 @@ export function DataManagement() {
         .eq("tenant_id", tenantId!);
 
       if (error) throw error;
-      exportToCsv(`productos_${new Date().toISOString().split('T')[0]}.csv`, data || []);
-      toast.success("Catálogo exportado");
+      exportToCsv(`products_${new Date().toISOString().split('T')[0]}.csv`, data || []);
+      toast.success(t("data.catalog_exported", "Catalog exported"));
     } catch (err: any) {
-      toast.error("Error al exportar: " + err.message);
+      toast.error(`${t("data.export_error", "Export error")}: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -54,16 +56,16 @@ export function DataManagement() {
       if (error) throw error;
 
       const flatData = (data || []).map((s: any) => ({
-        producto: s.products?.name,
+        product: s.products?.name,
         sku: s.products?.sku,
-        centro: s.inventory_centers?.name,
-        cantidad: s.quantity
+        center: s.inventory_centers?.name,
+        quantity: s.quantity
       }));
 
-      exportToCsv(`inventario_${new Date().toISOString().split('T')[0]}.csv`, flatData);
-      toast.success("Inventario exportado");
+      exportToCsv(`inventory_${new Date().toISOString().split('T')[0]}.csv`, flatData);
+      toast.success(t("data.inventory_exported", "Inventory exported"));
     } catch (err: any) {
-      toast.error("Error al exportar: " + err.message);
+      toast.error(`${t("data.export_error", "Export error")}: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -81,7 +83,7 @@ export function DataManagement() {
         const rows = parseCsv(content);
         
         if (rows.length === 0) {
-          toast.error("El archivo está vacío o tiene formato inválido");
+          toast.error(t("data.empty_csv", "The file is empty or has an invalid format"));
           setLoading(false);
           return;
         }
@@ -108,7 +110,6 @@ export function DataManagement() {
           if (id) {
             await supabase.from("products").update(productData).eq("id", id).eq("tenant_id", tenantId!);
           } else if (productData.sku) {
-            // Upsert por SKU si no hay ID
             const { data: existing } = await supabase.from("products").select("id").eq("sku", productData.sku).eq("tenant_id", tenantId!).maybeSingle();
             if (existing) {
               await supabase.from("products").update(productData).eq("id", existing.id);
@@ -122,12 +123,12 @@ export function DataManagement() {
           setProgress(p => p ? { ...p, current: i + 1 } : null);
         }
 
-        toast.success(`Importación finalizada: ${rows.length} productos procesados`);
+        toast.success(`${t("data.import_completed", "Import completed")}: ${rows.length} ${t("common.products", "products")}`);
         setProgress(null);
       };
       reader.readAsText(file);
     } catch (err: any) {
-      toast.error("Error al importar: " + err.message);
+      toast.error(`${t("data.import_error", "Import error")}: ${err.message}`);
     } finally {
       setLoading(false);
       e.target.value = "";
@@ -139,7 +140,7 @@ export function DataManagement() {
     if (!file) return;
 
     if (!selectedCenterId) {
-      toast.error("Debes seleccionar un centro de inventario");
+      toast.error(t("data.select_center_error", "Please select an inventory center"));
       return;
     }
 
@@ -161,7 +162,6 @@ export function DataManagement() {
 
           if (!sku) continue;
 
-          // Buscar producto por SKU
           const { data: product } = await supabase
             .from("products")
             .select("id")
@@ -170,7 +170,6 @@ export function DataManagement() {
             .maybeSingle();
 
           if (product) {
-            // Obtener stock actual para calcular el ajuste
             const { data: stock } = await supabase
               .from("inventory_stocks")
               .select("quantity")
@@ -189,7 +188,7 @@ export function DataManagement() {
                 inventoryCenterId: selectedCenterId,
                 type: "adjustment",
                 quantity: diff,
-                reason: "Importación masiva de datos",
+                reason: "Bulk data import",
                 userId: user?.id || "",
               });
             }
@@ -198,12 +197,12 @@ export function DataManagement() {
           setProgress(p => p ? { ...p, current: i + 1 } : null);
         }
 
-        toast.success(`Ajuste de inventario finalizado`);
+        toast.success(t("data.inventory_adjustment_done", "Inventory adjustment completed"));
         setProgress(null);
       };
       reader.readAsText(file);
     } catch (err: any) {
-      toast.error("Error al importar inventario: " + err.message);
+      toast.error(`${t("data.import_error", "Import error")}: ${err.message}`);
     } finally {
       setLoading(false);
       e.target.value = "";
@@ -218,39 +217,38 @@ export function DataManagement() {
           <div>
             <div className="flex items-center gap-2 text-brand-600">
               <FileSpreadsheet className="h-5 w-5" />
-              <div className="g-title-16">Catálogo de Productos</div>
+              <div className="g-title-16">{t("data.catalog_title", "Product Catalog")}</div>
             </div>
             <div className="h-meta mt-1">
-              Exporta o importa el listado completo de productos (precios, costos, categorías).
+              {t("data.catalog_desc", "Export or import the complete product catalog (prices, costs, categories).")}
             </div>
           </div>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-2 h-12"
-              onClick={exportProducts}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Exportar Catálogo (.csv)
-            </Button>
-            
-            <div className="space-y-2">
-              <Label htmlFor="import-products">Importar / Actualizar Catálogo</Label>
-              <div className="relative">
-                <Input 
-                  id="import-products" 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={importProducts}
-                  className="cursor-pointer"
-                  disabled={loading}
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                * Si incluyes la columna 'id', se actualizará el producto existente. 
-                Si no, se intentará buscar por 'sku'.
-              </p>
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-2 h-12"
+            onClick={exportProducts}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {t("data.export_catalog_btn", "Export Catalog (.csv)")}
+          </Button>
+          
+          <div className="space-y-2">
+            <Label htmlFor="import-products">{t("data.import_catalog_label", "Import / Update Catalog")}</Label>
+            <div className="relative">
+              <Input 
+                id="import-products" 
+                type="file" 
+                accept=".csv" 
+                onChange={importProducts}
+                className="cursor-pointer"
+                disabled={loading}
+              />
             </div>
+            <p className="text-[10px] text-muted-foreground">
+              {t("data.import_catalog_hint", "* If you include the 'id' column, existing products will be updated. Otherwise, matching by 'sku' is attempted.")}
+            </p>
+          </div>
         </div>
 
         {/* Stock de Inventario */}
@@ -258,71 +256,70 @@ export function DataManagement() {
           <div>
             <div className="flex items-center gap-2 text-brand-600">
               <Box className="h-5 w-5" />
-              <div className="g-title-16">Stock e Inventario</div>
+              <div className="g-title-16">{t("data.stock_title", "Stock & Inventory")}</div>
             </div>
             <div className="h-meta mt-1">
-              Ajusta masivamente las cantidades físicas en tus centros de inventario.
+              {t("data.stock_desc", "Batch-adjust physical quantities across your inventory centers.")}
             </div>
           </div>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-2 h-12"
-              onClick={exportInventory}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Exportar Stock Actual (.csv)
-            </Button>
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-2 h-12"
+            onClick={exportInventory}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {t("data.export_stock_btn", "Export Current Stock (.csv)")}
+          </Button>
 
-            <div className="space-y-3 pt-2 border-t">
-              <div className="space-y-1.5">
-                <Label>Centro destino para importación</Label>
-                <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un centro..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {centers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="import-inventory">Importar Stock (Ajuste Físico)</Label>
-                <Input 
-                  id="import-inventory" 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={importInventory}
-                  className="cursor-pointer"
-                  disabled={loading || !selectedCenterId}
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  * El archivo debe contener columnas 'sku' y 'quantity'. 
-                  Se generará un movimiento de ajuste automáticamente.
-                </p>
-              </div>
+          <div className="space-y-3 pt-2 border-t">
+            <div className="space-y-1.5">
+              <Label>{t("data.destination_center", "Destination center for import")}</Label>
+              <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("data.select_center", "Select a center...")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {centers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="import-inventory">{t("data.import_stock_label", "Import Stock (Physical Adjustment)")}</Label>
+              <Input 
+                id="import-inventory" 
+                type="file" 
+                accept=".csv" 
+                onChange={importInventory}
+                className="cursor-pointer"
+                disabled={loading || !selectedCenterId}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                {t("data.import_stock_hint", "* The file must contain 'sku' and 'quantity' columns. An adjustment movement will be generated automatically.")}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {progress && (
         <Alert className="bg-primary/5 border-primary/20 animate-pulse">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <AlertTitle>Procesando datos...</AlertTitle>
+          <AlertTitle>{t("data.processing", "Processing data...")}</AlertTitle>
           <AlertDescription>
-            Procesando fila {progress.current} de {progress.total}
+            {t("data.processing_row", "Processing row")} {progress.current} {t("common.of", "of")} {progress.total}
           </AlertDescription>
         </Alert>
       )}
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Recomendación</AlertTitle>
+        <AlertTitle>{t("data.recommendation", "Recommendation")}</AlertTitle>
         <AlertDescription>
-          Realiza una exportación antes de importar datos masivamente para tener un respaldo de seguridad.
+          {t("data.rec_desc", "Export a backup before performing bulk imports to keep your data safe.")}
         </AlertDescription>
       </Alert>
     </div>

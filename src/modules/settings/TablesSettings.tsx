@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -12,6 +13,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 export default function TablesSettings() {
   const { tenantId, branchId, branches } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -66,7 +68,7 @@ export default function TablesSettings() {
   };
 
   const save = async () => {
-    if (!tenantId || !scopeBranch || !name.trim()) return toast.error("Completa los campos");
+    if (!tenantId || !scopeBranch || !name.trim()) return toast.error(t("tables.fill_fields", "Please complete all fields"));
     const payload = {
       name: name.trim(), capacity, branch_id: scopeBranch,
       assigned_waiter_id: waiterId || null,
@@ -81,14 +83,14 @@ export default function TablesSettings() {
       });
       if (error) return toast.error(error.message);
     }
-    toast.success("Mesa guardada");
+    toast.success(t("tables.saved", "Table saved successfully"));
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["tables-settings"] });
     qc.invalidateQueries({ queryKey: ["tables"] });
   };
 
   const remove = async (id: string) => {
-    if (!confirm("¿Eliminar esta mesa?")) return;
+    if (!confirm(t("tables.delete_confirm", "Delete this table?"))) return;
     const { error } = await supabase.from("tables").delete().eq("id", id);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["tables-settings"] });
@@ -99,32 +101,32 @@ export default function TablesSettings() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold text-ink-900">Mesas</p>
-          <p className="h-meta">Catálogo de mesas por sucursal</p>
+          <p className="font-semibold text-ink-900">{t("tables.title", "Tables")}</p>
+          <p className="h-meta">{t("tables.settings_desc", "Branch table catalog")}</p>
         </div>
         <button type="button" className="g-btn g-btn-primary" onClick={openNew}>
-          <Plus className="h-4 w-4" /> Nueva mesa
+          <Plus className="h-4 w-4" /> {t("tables.new_table", "New Table")}
         </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {(tables ?? []).map((t) => {
-          const branch = branches.find((b) => b.id === t.branch_id);
+        {(tables ?? []).map((tItem) => {
+          const branch = branches.find((b) => b.id === tItem.branch_id);
           return (
-            <div key={t.id} className="glass rounded-xl p-3">
+            <div key={tItem.id} className="glass rounded-xl p-3">
               <div className="flex items-start justify-between">
-                <div className="font-bold text-lg text-ink-900">{t.name}</div>
-                <span className="g-pill g-pill-ghost g-pill-h20">{t.capacity} pax</span>
+                <div className="font-bold text-lg text-ink-900">{tItem.name}</div>
+                <span className="g-pill g-pill-ghost g-pill-h20">{tItem.capacity} {t("tables.pax", "guests")}</span>
               </div>
               <div className="h-meta mt-1 truncate">{branch?.name ?? "—"}</div>
               <div className="flex gap-1 mt-2">
-                <button type="button" className="g-btn g-btn-ghost h-7 px-2" title="Editar mesa" onClick={() => openEdit(t)}>
+                <button type="button" className="g-btn g-btn-ghost h-7 px-2" title={t("tables.edit_table", "Edit table")} onClick={() => openEdit(tItem)}>
                   <Pencil className="h-3 w-3" />
                 </button>
-                <button type="button" className="g-btn g-btn-ghost h-7 px-2" title="Ver QR" onClick={() => setQrTable(t)}>
+                <button type="button" className="g-btn g-btn-ghost h-7 px-2" title={t("tables.view_qr", "View QR")} onClick={() => setQrTable(tItem)}>
                   <QrCode className="h-3 w-3" />
                 </button>
-                <button type="button" className="g-btn g-btn-ghost h-7 px-2 text-red-500 hover:text-red-600" title="Eliminar mesa" onClick={() => remove(t.id)}>
+                <button type="button" className="g-btn g-btn-ghost h-7 px-2 text-red-500 hover:text-red-600" title={t("tables.delete_table", "Delete table")} onClick={() => remove(tItem.id)}>
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -133,7 +135,7 @@ export default function TablesSettings() {
         })}
         {(tables ?? []).length === 0 && (
           <div className="col-span-full text-center py-12 h-meta">
-            Aún no hay mesas. Crea la primera con "Nueva mesa".
+            {t("tables.empty_settings", 'No tables created yet. Create the first one with "New Table".')}
           </div>
         )}
       </div>
@@ -141,32 +143,32 @@ export default function TablesSettings() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar mesa" : "Nueva mesa"}</DialogTitle>
+            <DialogTitle>{editing ? t("tables.edit_table", "Edit Table") : t("tables.new_table", "New Table")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Sucursal</Label>
+              <Label>{t("common.branch", "Branch")}</Label>
               <Select value={scopeBranch} onValueChange={setScopeBranch}>
-                <SelectTrigger><SelectValue placeholder="Selecciona sucursal" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("tables.select_branch", "Select branch")} /></SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Nombre / Número</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Mesa 1" />
+              <Label>{t("tables.name_number", "Name / Number")}</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Table 1" />
             </div>
             <div className="space-y-1.5">
-              <Label>Capacidad</Label>
+              <Label>{t("tables.capacity", "Capacity")}</Label>
               <Input type="number" min={1} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Mesero asignado (opcional)</Label>
+              <Label>{t("tables.assigned_waiter", "Assigned Waiter (optional)")}</Label>
               <Select value={waiterId || "none"} onValueChange={(v) => setWaiterId(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("tables.unassigned", "Unassigned")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin asignar (cualquier mesero puede tomarla)</SelectItem>
+                  <SelectItem value="none">{t("tables.unassigned_desc", "Unassigned (any waiter can take it)")}</SelectItem>
                   {(waiters ?? []).map((w) => (
                     <SelectItem key={w.id} value={w.id}>{w.full_name ?? w.email}</SelectItem>
                   ))}
@@ -175,8 +177,8 @@ export default function TablesSettings() {
             </div>
           </div>
           <DialogFooter>
-            <button type="button" className="g-btn g-btn-ghost" onClick={() => setOpen(false)}>Cancelar</button>
-            <button type="button" className="g-btn g-btn-primary" onClick={save}>Guardar</button>
+            <button type="button" className="g-btn g-btn-ghost" onClick={() => setOpen(false)}>{t("common.cancel", "Cancel")}</button>
+            <button type="button" className="g-btn g-btn-primary" onClick={save}>{t("common.save", "Save")}</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -196,9 +198,9 @@ export default function TablesSettings() {
                 <button
                   type="button"
                   className="g-btn g-btn-ghost"
-                  onClick={() => { navigator.clipboard.writeText(url); toast.success("URL copiada"); }}
+                  onClick={() => { navigator.clipboard.writeText(url); toast.success(t("tables.url_copied", "URL copied")); }}
                 >
-                  Copiar URL
+                  {t("tables.copy_url", "Copy URL")}
                 </button>
               </div>
             );

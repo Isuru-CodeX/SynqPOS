@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { formatCurrency } from "@/lib/format";
 import { Receipt, Undo2 } from "lucide-react";
 import { ReturnDialog } from "./ReturnDialog";
+import { useI18n } from "@/lib/i18n";
 
 type SaleItem = {
   id: string;
@@ -28,6 +29,7 @@ type Sale = {
 
 export default function Sales() {
   const { branchId } = useTenantContext();
+  const { t } = useI18n();
   const [returnSale, setReturnSale] = useState<Sale | null>(null);
 
   const { data: sales } = useQuery<Sale[]>({
@@ -47,26 +49,26 @@ export default function Sales() {
   return (
     <div className="flex flex-col gap-5">
       <div className="g-page-hd">
-        <div className="g-page-hd-eyebrow">OPERACIÓN · VENTAS</div>
-        <div className="h-display g-page-title">Ventas</div>
-        <div className="g-page-hd-meta">{sales?.length ?? 0} ventas recientes</div>
+        <div className="g-page-hd-eyebrow">{t("sales.subtitle", "OPERATIONS · SALES")}</div>
+        <h1 className="h-display g-page-title">{t("sales.title", "Sales & Receipts")}</h1>
+        <div className="g-page-hd-meta">{sales?.length ?? 0} {t("sales.registered", "recent sales")}</div>
       </div>
 
       {!sales || sales.length === 0 ? (
         <EmptyState
           icon={Receipt}
-          title="Aún no hay ventas"
-          description="Las ventas aparecerán aquí en cuanto cierres tu primer ticket en el POS."
+          title={t("sales.no_sales", "No sales recorded yet")}
+          description={t("sales.no_sales_desc", "Sales will appear here as soon as you complete your first sale ticket in POS.")}
         />
       ) : (
         <div className="glass rounded-2xl overflow-hidden">
           <div className="g-sales-head">
-            <span>Ticket</span>
-            <span>Fecha</span>
-            <span>Items</span>
-            <span>Pago</span>
-            <span className="text-right">Total</span>
-            <span>Estado</span>
+            <span>{t("sales.ticket", "Ticket #")}</span>
+            <span>{t("sales.date", "Date & Time")}</span>
+            <span>{t("sales.items", "Items")}</span>
+            <span>{t("sales.method", "Payment Method")}</span>
+            <span className="text-right">{t("sales.total", "Total Amount")}</span>
+            <span>{t("products.col_status", "Status")}</span>
             <span />
           </div>
 
@@ -74,10 +76,10 @@ export default function Sales() {
             <div key={s.id} className="g-sales-row">
               <span className="g-sales-ticket">#{s.ticket_number}</span>
               <span className="g-sales-date">
-                {new Date(s.created_at).toLocaleString("es-CO")}
+                {new Date(s.created_at).toLocaleString()}
               </span>
               <span className="g-sales-count">
-                {s.sale_items?.length ?? 0} prod.
+                {s.sale_items?.length ?? 0} {t("pos.items", "items")}
               </span>
               <span className="g-sales-pay">
                 {s.payments?.map((p) => p.method).join(", ") || "—"}
@@ -87,7 +89,7 @@ export default function Sales() {
               </span>
               <span>
                 <span className={s.status === "completed" ? "g-pill g-pill-ok" : "g-pill g-pill-ghost"}>
-                  {s.status === "completed" ? "Completada" : s.status}
+                  {s.status === "completed" ? t("status.completed", "Completed") : s.status}
                 </span>
               </span>
               <span>
@@ -98,7 +100,7 @@ export default function Sales() {
                     onClick={() => setReturnSale(s)}
                   >
                     <Undo2 size={13} />
-                    Devolver
+                    {t("sales.refund", "Refund / Return")}
                   </button>
                 )}
               </span>

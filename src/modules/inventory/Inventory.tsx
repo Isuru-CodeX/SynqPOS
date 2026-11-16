@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryCenters } from "@/hooks/useInventoryCenters";
+import { useI18n } from "@/lib/i18n";
 import { InventoryCenters } from "./components/InventoryCenters";
 import { InvoiceOCRDialog } from "./components/InvoiceOCRDialog";
 import { TransferDialog } from "./components/TransferDialog";
@@ -25,10 +26,10 @@ import "./inventory.css";
 const MOVE_TYPES = ["purchase", "adjustment", "waste", "return"] as const;
 
 const MOVE_TYPE_LABELS: Record<typeof MOVE_TYPES[number], string> = {
-  purchase:   "Compra / Entrada",
-  adjustment: "Ajuste",
-  waste:      "Merma / Pérdida",
-  return:     "Devolución",
+  purchase:   "Purchase / Inflow",
+  adjustment: "Adjustment",
+  waste:      "Waste / Spoilage",
+  return:     "Return",
 };
 
 /* ── Stock bar component (inline dynamic styles OK: data-driven widths) ── */
@@ -74,6 +75,7 @@ type TabId = "stock" | "forecast" | "history" | "centers";
 export default function Inventory() {
   const { tenantId, branchId } = useTenantContext();
   const { user } = useAuth();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [openOCR, setOpenOCR] = useState(false);
@@ -166,10 +168,10 @@ export default function Inventory() {
   }
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: "stock",    label: "Stock actual",  icon: <Warehouse size={14} /> },
-    { id: "forecast", label: "Proyecciones",  icon: <TrendingUp size={14} /> },
-    { id: "history",  label: "Kardex",        icon: <History size={14} /> },
-    { id: "centers",  label: "Centros",       icon: <Settings2 size={14} /> },
+    { id: "stock",    label: t("inventory.tab_stock", "Current Stock"),  icon: <Warehouse size={14} /> },
+    { id: "forecast", label: t("inventory.tab_forecast", "Forecast"),  icon: <TrendingUp size={14} /> },
+    { id: "history",  label: t("inventory.tab_history", "Kardex Ledger"), icon: <History size={14} /> },
+    { id: "centers",  label: t("inventory.tab_centers", "Centers"),       icon: <Settings2 size={14} /> },
   ];
 
   return (
@@ -179,13 +181,13 @@ export default function Inventory() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="h-label mb-1 inv-eyebrow">
-            Inventario · Stocks
+            {t("nav.inventory", "Inventory")} · {t("inventory.stocks", "Stocks")}
           </div>
-          <h1 className="h-display inv-page-title">Inventario</h1>
+          <h1 className="h-display inv-page-title">{t("inventory.title", "Inventory")}</h1>
           <div className="h-meta mt-1">
-            {activeStocks.length} productos activos
-            {lowStock.length > 0 && <> · <span className="inv-warn-text">{lowStock.length} bajo mínimo</span></>}
-            {outOfStock.length > 0 && <> · <span className="inv-bad-text">{outOfStock.length} sin stock</span></>}
+            {activeStocks.length} {t("inventory.active_products", "active products")}
+            {lowStock.length > 0 && <> · <span className="inv-warn-text">{lowStock.length} {t("inventory.low_stock", "low stock")}</span></>}
+            {outOfStock.length > 0 && <> · <span className="inv-bad-text">{outOfStock.length} {t("inventory.out_of_stock", "out of stock")}</span></>}
           </div>
         </div>
 
@@ -194,7 +196,7 @@ export default function Inventory() {
           {/* EAN */}
           <Dialog open={openEAN} onOpenChange={setOpenEAN}>
             <button type="button" className="g-btn g-btn-ghost" onClick={() => setOpenEAN(true)}>
-              <Barcode size={15} /> Cargar por EAN
+              <Barcode size={15} /> {t("inventory.load_ean", "Import EAN")}
             </button>
             <EanImportDialog
               tenantId={tenantId!} branchId={branchId!} userId={user!.id}
@@ -213,7 +215,7 @@ export default function Inventory() {
           {/* OCR Invoice */}
           <Dialog open={openOCR} onOpenChange={setOpenOCR}>
             <button type="button" className="g-btn g-btn-ghost" onClick={() => setOpenOCR(true)}>
-              <FileText size={15} /> Cargar Factura (AI)
+              <FileText size={15} /> {t("inventory.load_invoice_ai", "AI Invoice OCR")}
             </button>
             <InvoiceOCRDialog
               tenantId={tenantId!} branchId={branchId!} userId={user!.id}
@@ -230,7 +232,7 @@ export default function Inventory() {
           {/* Transfer */}
           <Dialog open={openTransfer} onOpenChange={setOpenTransfer}>
             <button type="button" className="g-btn g-btn-ghost" onClick={() => setOpenTransfer(true)}>
-              <ArrowRightLeft size={15} /> Transferir
+              <ArrowRightLeft size={15} /> {t("inventory.transfer", "Transfer")}
             </button>
             <TransferDialog
               tenantId={tenantId!} branchId={branchId!} userId={user!.id}
@@ -247,7 +249,7 @@ export default function Inventory() {
           {/* Provision */}
           <Dialog open={open} onOpenChange={setOpen}>
             <button type="button" className="g-btn g-btn-primary" onClick={() => setOpen(true)}>
-              <PackagePlus size={15} /> Aprovisionar
+              <PackagePlus size={15} /> {t("inventory.provision", "Stock In / Receive")}
             </button>
             <MovementDialog
               tenantId={tenantId!} branchId={branchId!} userId={user!.id}
@@ -269,17 +271,17 @@ export default function Inventory() {
         {/* Total SKUs */}
         <div className="glass g-kpi">
           <div className="flex items-center justify-between">
-            <span className="h-label">Total SKUs</span>
+            <span className="h-label">{t("inventory.total_skus", "Total SKUs")}</span>
             <div className="orb g-orb-38 orb-sq"><Package size={16} /></div>
           </div>
           <div className="g-num-28">{activeStocks.length}</div>
-          <span className="h-meta">productos activos</span>
+          <span className="h-meta">{t("inventory.active_products", "active products")}</span>
         </div>
 
         {/* Bajo stock */}
         <div className="glass g-kpi">
           <div className="flex items-center justify-between">
-            <span className="h-label">Bajo stock</span>
+            <span className="h-label">{t("inventory.low_stock_card", "Low Stock")}</span>
             <div className="orb g-orb-38 orb-sq inv-orb-warn">
               <AlertTriangle size={15} />
             </div>
@@ -287,13 +289,13 @@ export default function Inventory() {
           <div className={"g-num-28 " + (lowStock.length > 0 ? "inv-warn-text" : "inv-ink-900")}>
             {lowStock.length}
           </div>
-          <span className="h-meta">requieren reposición</span>
+          <span className="h-meta">{t("inventory.reorder_needed", "require replenishment")}</span>
         </div>
 
         {/* Sin stock */}
         <div className="glass g-kpi">
           <div className="flex items-center justify-between">
-            <span className="h-label">Sin stock</span>
+            <span className="h-label">{t("inventory.filter_out", "Out of Stock")}</span>
             <div className="orb g-orb-38 orb-sq inv-orb-bad">
               <Package size={15} />
             </div>
@@ -301,32 +303,32 @@ export default function Inventory() {
           <div className={"g-num-28 " + (outOfStock.length > 0 ? "inv-bad-text" : "inv-ink-900")}>
             {outOfStock.length}
           </div>
-          <span className="h-meta">productos agotados</span>
+          <span className="h-meta">{t("inventory.depleted", "depleted items")}</span>
         </div>
 
         {/* Valor inventario */}
         <div className="glass g-kpi">
           <div className="flex items-center justify-between">
-            <span className="h-label">Unidades totales</span>
+            <span className="h-label">{t("inventory.total_units", "Total Units")}</span>
             <div className="orb g-orb-38 orb-sq"><TrendingUp size={15} /></div>
           </div>
-          <div className="g-num-28">{totalValue.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</div>
-          <span className="h-meta">en todos los centros</span>
+          <div className="g-num-28">{totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <span className="h-meta">{t("inventory.all_centers", "across all centers")}</span>
         </div>
 
         {/* Transfer card — wide */}
         <div className="glass g-kpi inv-card-transfer">
           <div className="flex items-center justify-between">
-            <span className="h-label">Transferencia rápida</span>
+            <span className="h-label">{t("inventory.quick_transfer", "Quick Transfer")}</span>
             <div className="orb g-orb-38 orb-sq"><ArrowRightLeft size={15} /></div>
           </div>
-          <div className="g-num-20 text-ink-700">Mover stock entre centros</div>
+          <div className="g-num-20 text-ink-700">{t("inventory.move_stock_desc", "Relocate stock between centers")}</div>
           <div className="flex gap-2 mt-1">
             <button type="button" className="g-btn g-btn-primary inv-btn-sm" onClick={() => setOpenTransfer(true)}>
-              <ArrowRightLeft size={13} /> Transferir ahora
+              <ArrowRightLeft size={13} /> {t("inventory.transfer_now", "Transfer Now")}
             </button>
             <button type="button" className="g-btn g-btn-ghost inv-btn-sm" onClick={() => setActiveTab("centers")}>
-              <Settings2 size={13} /> Ver centros
+              <Settings2 size={13} /> {t("inventory.view_centers", "View Centers")}
             </button>
           </div>
         </div>
@@ -336,7 +338,7 @@ export default function Inventory() {
       {lowStock.length > 0 && (
         <div className="glass-thin flex items-center gap-3 px-4 py-3 inv-alert-banner">
           <AlertTriangle size={15} className="inv-warn-text flex-shrink-0" />
-          <span className="h-label inv-warn-text">Stock bajo ({lowStock.length}):</span>
+          <span className="h-label inv-warn-text">{t("inventory.low_stock_alert", "Low stock alert")} ({lowStock.length}):</span>
           <span className="h-meta truncate">
             {lowStock.slice(0, 8).map((s: any) => s.products?.name).join(", ")}
             {lowStock.length > 8 && " …"}
@@ -362,13 +364,13 @@ export default function Inventory() {
 
         {/* Center filter */}
         <div className="flex items-center gap-2">
-          <span className="h-label hidden md:block">Centro:</span>
+          <span className="h-label hidden md:block">{t("inventory.center_label", "Center:")}</span>
           <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
             <SelectTrigger className="h-8 text-xs inv-select-trigger">
-              <SelectValue placeholder="Todos los centros" />
+              <SelectValue placeholder={t("inventory.all_centers_filter", "All centers")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los centros</SelectItem>
+              <SelectItem value="all">{t("inventory.all_centers_filter", "All centers")}</SelectItem>
               {centers.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
@@ -388,7 +390,7 @@ export default function Inventory() {
               <Search size={14} className="inv-ink-400 flex-shrink-0" />
               <input
                 className="bg-transparent border-none outline-none text-sm flex-1 inv-search-input"
-                placeholder="Buscar producto..."
+                placeholder={t("inventory.search_placeholder", "Search product...")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -397,9 +399,9 @@ export default function Inventory() {
             {/* Filter pills */}
             <div className="flex items-center gap-1.5">
               {[
-                { id: "all",  label: "Todos", count: activeStocks.length },
-                { id: "low",  label: "Bajo mínimo", count: lowStock.length },
-                { id: "out",  label: "Sin stock", count: outOfStock.length },
+                { id: "all",  label: t("inventory.filter_all", "All"), count: activeStocks.length },
+                { id: "low",  label: t("inventory.filter_low", "Low Stock"), count: lowStock.length },
+                { id: "out",  label: t("inventory.filter_out", "Out of Stock"), count: outOfStock.length },
               ].map((f) => (
                 <button
                   key={f.id}
@@ -428,20 +430,20 @@ export default function Inventory() {
           <div className="glass overflow-hidden">
             {/* Table header */}
             <div className="grid items-center px-5 py-3 inv-table-grid inv-table-header">
-              <span className="h-label">Producto</span>
-              <span className="h-label">SKU</span>
-              <span className="h-label">Stock actual</span>
-              <span className="h-label">Ubicación</span>
-              <span className="h-label">Movimiento</span>
-              <span className="h-label">Unidad</span>
-              <span className="h-label">Estado</span>
+              <span className="h-label">{t("inventory.col_product", "Product")}</span>
+              <span className="h-label">{t("inventory.col_sku", "SKU")}</span>
+              <span className="h-label">{t("inventory.col_stock", "Current Stock")}</span>
+              <span className="h-label">{t("inventory.col_location", "Location")}</span>
+              <span className="h-label">{t("inventory.col_trend", "Movement")}</span>
+              <span className="h-label">{t("inventory.col_unit", "Unit")}</span>
+              <span className="h-label">{t("inventory.col_status", "Status")}</span>
             </div>
 
             {/* Table rows */}
             {filteredStocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="orb g-orb-52"><Package size={22} /></div>
-                <span className="h-meta">Sin productos{search ? ` para "${search}"` : ""}</span>
+                <span className="h-meta">{t("inventory.no_products", "No products found")}{search ? ` for "${search}"` : ""}</span>
               </div>
             ) : (
               filteredStocks.map((s: any) => {
@@ -465,7 +467,7 @@ export default function Inventory() {
                           {s.products?.name}
                         </div>
                         <div className="h-meta truncate">
-                          {s.products?.sku ?? "Sin SKU"}
+                          {s.products?.sku ?? "—"}
                         </div>
                       </div>
                     </div>
@@ -482,7 +484,7 @@ export default function Inventory() {
                           {qty.toFixed(2)}
                         </span>
                         {min > 0 && (
-                          <span className="h-meta">/ mín {min}</span>
+                          <span className="h-meta">/ min {min}</span>
                         )}
                       </div>
                       <StockBar qty={qty} minStock={min} />
@@ -492,7 +494,7 @@ export default function Inventory() {
                     <div>
                       <span className="g-pill g-pill-ghost inv-text-11">
                         <Warehouse size={10} />
-                        {s.inventory_centers?.name || "Principal"}
+                        {s.inventory_centers?.name || t("common.main", "Main")}
                       </span>
                     </div>
 
@@ -507,11 +509,11 @@ export default function Inventory() {
                     {/* Status badge */}
                     <div>
                       {isOut ? (
-                        <span className="g-pill g-pill-bad inv-text-10">Sin stock</span>
+                        <span className="g-pill g-pill-bad inv-text-10">{t("inventory.status_out", "Out of stock")}</span>
                       ) : isLow ? (
-                        <span className="g-pill g-pill-warn inv-text-10">Bajo</span>
+                        <span className="g-pill g-pill-warn inv-text-10">{t("inventory.status_low", "Low stock")}</span>
                       ) : (
-                        <span className="g-pill g-pill-ok inv-text-10">OK</span>
+                        <span className="g-pill g-pill-ok inv-text-10">{t("inventory.status_ok", "Optimal")}</span>
                       )}
                     </div>
                   </div>
@@ -522,8 +524,8 @@ export default function Inventory() {
             {/* Table footer */}
             {filteredStocks.length > 0 && (
               <div className="px-5 py-3 flex items-center justify-between inv-table-footer">
-                <span className="h-meta">{filteredStocks.length} productos mostrados</span>
-                <span className="h-meta">{filteredStocks.reduce((a: number, s: any) => a + Number(s.quantity), 0).toLocaleString("es-CO", { maximumFractionDigits: 0 })} unidades en total</span>
+                <span className="h-meta">{filteredStocks.length} {t("inventory.products_shown", "products shown")}</span>
+                <span className="h-meta">{filteredStocks.reduce((a: number, s: any) => a + Number(s.quantity), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {t("inventory.units_total", "total units")}</span>
               </div>
             )}
           </div>
@@ -540,13 +542,13 @@ export default function Inventory() {
         <div className="glass overflow-hidden">
           {/* Header */}
           <div className="grid items-center px-5 py-3 inv-history-grid inv-table-header">
-            <span className="h-label">Fecha</span>
-            <span className="h-label">Producto</span>
-            <span className="h-label">Centro</span>
-            <span className="h-label">Tipo</span>
-            <span className="h-label">Cantidad</span>
-            <span className="h-label">Motivo</span>
-            <span className="h-label">Origen</span>
+            <span className="h-label">{t("common.date", "Date")}</span>
+            <span className="h-label">{t("common.product", "Product")}</span>
+            <span className="h-label">{t("inventory.center", "Center")}</span>
+            <span className="h-label">{t("common.type", "Type")}</span>
+            <span className="h-label">{t("inventory.quantity", "Quantity")}</span>
+            <span className="h-label">{t("inventory.reason", "Reason")}</span>
+            <span className="h-label">{t("inventory.origin", "Origin")}</span>
           </div>
 
           {(!movements || movements.length === 0) ? (
@@ -591,6 +593,7 @@ export default function Inventory() {
 
 /* ── Forecast tab ── */
 function ForecastTab({ branchId, stocks }: { branchId: string; stocks: any[] }) {
+  const { t } = useI18n();
   const { data: salesVelocity } = useQuery({
     queryKey: ["sales-velocity", branchId],
     enabled: !!branchId,
@@ -634,7 +637,7 @@ function ForecastTab({ branchId, stocks }: { branchId: string; stocks: any[] }) 
     return (
       <div className="glass flex flex-col items-center justify-center py-16 gap-3">
         <div className="orb g-orb-52"><TrendingUp size={22} /></div>
-        <span className="h-meta">No hay datos de ventas de los últimos 30 días para proyectar.</span>
+        <span className="h-meta">{t("inventory.no_forecast_data", "No sales data from the last 30 days to project.")}</span>
       </div>
     );
   }
@@ -642,11 +645,11 @@ function ForecastTab({ branchId, stocks }: { branchId: string; stocks: any[] }) 
   return (
     <div className="glass overflow-hidden">
       <div className="grid items-center px-5 py-3 inv-forecast-grid inv-table-header">
-        <span className="h-label">Producto</span>
-        <span className="h-label">Stock actual</span>
-        <span className="h-label">Venta/día (30d)</span>
-        <span className="h-label">Días restantes</span>
-        <span className="h-label">Alerta</span>
+        <span className="h-label">{t("common.product", "Product")}</span>
+        <span className="h-label">{t("inventory.current_stock", "Current Stock")}</span>
+        <span className="h-label">{t("inventory.daily_sales_30d", "Sales/day (30d)")}</span>
+        <span className="h-label">{t("inventory.days_remaining", "Days remaining")}</span>
+        <span className="h-label">{t("inventory.alert", "Alert")}</span>
       </div>
 
       {rows.map((r: any) => {
@@ -668,9 +671,9 @@ function ForecastTab({ branchId, stocks }: { branchId: string; stocks: any[] }) 
             </span>
             <span>
               {urgent ? (
-                <span className="g-pill g-pill-bad inv-text-10">Urgente ≤7d</span>
+                <span className="g-pill g-pill-bad inv-text-10">≤7 days</span>
               ) : warning ? (
-                <span className="g-pill g-pill-warn inv-text-10">≤14 días</span>
+                <span className="g-pill g-pill-warn inv-text-10">≤14 days</span>
               ) : (
                 <span className="g-pill g-pill-ok inv-text-10">OK</span>
               )}
@@ -684,6 +687,7 @@ function ForecastTab({ branchId, stocks }: { branchId: string; stocks: any[] }) 
 
 /* ── Movement dialog ── */
 function MovementDialog({ tenantId, branchId, userId, products, centers, defaultCenterId, onClose }: any) {
+  const { t } = useI18n();
   const [productSearch, setProductSearch] = useState("");
   const [productId, setProductId] = useState<string>("");
   const [centerId, setCenterId] = useState<string>(defaultCenterId || "");
@@ -704,19 +708,19 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId) return toast.error("Selecciona un producto");
-    if (!centerId) return toast.error("Selecciona el centro de inventario");
-    if (!qty || Number(qty) <= 0) return toast.error("Cantidad inválida");
+    if (!productId) return toast.error(t("inventory.select_product_error", "Please select a product"));
+    if (!centerId) return toast.error(t("inventory.select_center_error", "Please select an inventory center"));
+    if (!qty || Number(qty) <= 0) return toast.error(t("inventory.invalid_qty", "Invalid quantity"));
     setSaving(true);
     try {
       await applyInventoryMovement({
         tenantId, branchId, userId, productId,
         inventoryCenterId: centerId,
         type, quantity: Number(qty),
-        reason: reason.trim() || `Entrada manual — ${MOVE_TYPE_LABELS[type]}`,
+        reason: reason.trim() || `Manual entry — ${MOVE_TYPE_LABELS[type]}`,
         referenceType: "manual",
       });
-      toast.success("Movimiento registrado correctamente");
+      toast.success(t("inventory.movement_saved", "Inventory movement recorded successfully"));
       onClose();
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
@@ -726,26 +730,26 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
     <DialogContent className="max-w-md">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <PackagePlus className="h-5 w-5" /> Aprovisionar inventario
+          <PackagePlus className="h-5 w-5" /> {t("inventory.provision_title", "Stock Inflow & Adjustments")}
         </DialogTitle>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4">
 
         {/* Tipo de movimiento */}
         <div className="space-y-1.5">
-          <Label>Tipo de movimiento</Label>
+          <Label>{t("inventory.movement_type", "Movement Type")}</Label>
           <div className="grid grid-cols-2 gap-2">
-            {MOVE_TYPES.map((t) => (
+            {MOVE_TYPES.map((tItem) => (
               <button
-                key={t} type="button"
-                onClick={() => setType(t)}
+                key={tItem} type="button"
+                onClick={() => setType(tItem)}
                 className={`px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-                  type === t
+                  type === tItem
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card text-muted-foreground border-border hover:bg-muted"
                 }`}
               >
-                {MOVE_TYPE_LABELS[t]}
+                {MOVE_TYPE_LABELS[tItem]}
               </button>
             ))}
           </div>
@@ -753,12 +757,12 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
 
         {/* Producto con búsqueda */}
         <div className="space-y-1.5">
-          <Label>Producto</Label>
+          <Label>{t("common.product", "Product")}</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Buscar por nombre o SKU..."
+              placeholder={t("inventory.search_product_sku", "Search by name or SKU...")}
               value={productSearch}
               onChange={(e) => { setProductSearch(e.target.value); setProductId(""); }}
             />
@@ -767,13 +771,13 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
             <div className="flex items-center justify-between px-3 py-2 rounded-md bg-muted text-sm">
               <span className="font-medium">{selectedProduct.name}</span>
               <button type="button" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => { setProductId(""); setProductSearch(""); }}>
-                Cambiar
+                {t("common.change", "Change")}
               </button>
             </div>
           ) : productSearch.length > 0 && (
             <div className="border rounded-md max-h-48 overflow-y-auto">
               {filteredProducts.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-muted-foreground text-center">Sin resultados</p>
+                <p className="px-3 py-4 text-sm text-muted-foreground text-center">{t("common.no_results", "No results")}</p>
               ) : filteredProducts.slice(0, 20).map((p: any) => (
                 <button
                   key={p.id} type="button"
@@ -790,9 +794,9 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
 
         {/* Centro */}
         <div className="space-y-1.5">
-          <Label>Centro de inventario</Label>
+          <Label>{t("inventory.center", "Inventory Center")}</Label>
           <Select value={centerId} onValueChange={setCenterId}>
-            <SelectTrigger><SelectValue placeholder="Selecciona el centro..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("inventory.select_center", "Select a center...")} /></SelectTrigger>
             <SelectContent>
               {(centers as any[]).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
@@ -801,7 +805,7 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
 
         {/* Cantidad */}
         <div className="space-y-1.5">
-          <Label>Cantidad {selectedProduct?.unit_code ? `(${selectedProduct.unit_code})` : ""}</Label>
+          <Label>{t("inventory.quantity", "Quantity")} {selectedProduct?.unit_code ? `(${selectedProduct.unit_code})` : ""}</Label>
           <Input
             type="number" step="0.001" min="0.001" required
             value={qty} onChange={(e) => setQty(e.target.value)}
@@ -812,10 +816,10 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
 
         {/* Motivo */}
         <div className="space-y-1.5">
-          <Label>Motivo <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+          <Label>{t("inventory.reason", "Reason")} <span className="text-muted-foreground font-normal">({t("common.optional", "optional")})</span></Label>
           <Textarea
             value={reason} onChange={(e) => setReason(e.target.value)}
-            placeholder="Ej: Compra a proveedor, conteo físico, etc."
+            placeholder={t("inventory.reason_placeholder", "e.g., Supplier purchase, cycle count adjustment, etc.")}
             rows={2}
           />
         </div>
@@ -825,7 +829,7 @@ function MovementDialog({ tenantId, branchId, userId, products, centers, default
           className="g-btn g-btn-primary w-full"
           disabled={saving || !productId || !qty || !centerId}
         >
-          {saving ? "Registrando…" : "Registrar movimiento"}
+          {saving ? t("common.saving", "Saving...") : t("inventory.record_movement", "Record Movement")}
         </button>
       </form>
     </DialogContent>

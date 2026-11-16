@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
 import { useTenantContext } from "@/hooks/useTenantContext";
-
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -36,9 +35,9 @@ type Preset = {
 
 const BAKERY_PRESET: Preset = {
   key: "bakery",
-  label: "Panadería",
-  description: "Panes, pastelería, café y sándwiches.",
-  business: { name: "Panadería Pan de Oro", currency: "COP", tax_rate: 19 },
+  label: "Bakery & Cafe",
+  description: "Breads, pastries, coffee, and sandwiches.",
+  business: { name: "Golden Loaf Bakery", currency: "USD", tax_rate: 10 },
   categories: [
     { name: "Panes", color: "#c2410c" },
     { name: "Pastelería", color: "#d97706" },
@@ -83,9 +82,9 @@ const BAKERY_PRESET: Preset = {
 
 const BAR_PRESET: Preset = {
   key: "bar",
-  label: "Bar",
-  description: "Cervezas, cocteles, licores y tapas.",
-  business: { name: "La Barra de Lúpulo", currency: "COP", tax_rate: 19 },
+  label: "Bar & Pub",
+  description: "Beers, cocktails, liquors, and appetizers.",
+  business: { name: "The Hop Bar & Lounge", currency: "USD", tax_rate: 10 },
   categories: [
     { name: "Cervezas", color: "#ca8a04" },
     { name: "Cocteles", color: "#db2777" },
@@ -141,9 +140,9 @@ const BAR_PRESET: Preset = {
 
 const ICECREAM_PRESET: Preset = {
   key: "icecream",
-  label: "Heladería",
-  description: "Helados, waffles, crepes y malteadas.",
-  business: { name: "Glacé Postres & Helados", currency: "COP", tax_rate: 19 },
+  label: "Ice Cream & Desserts",
+  description: "Ice creams, waffles, crepes, and milkshakes.",
+  business: { name: "Glacé Desserts & Gelato", currency: "USD", tax_rate: 10 },
   categories: [
     { name: "Helados", color: "#ec4899" },
     { name: "Waffles", color: "#f59e0b" },
@@ -219,6 +218,7 @@ const pickN = <T,>(arr: T[], n: number) => {
 
 export default function DemoPresets() {
   const { tenantId, branchId, hasRole } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const canEdit = hasRole("owner", "admin");
   const [pending, setPending] = useState<null | "bakery" | "bar" | "icecream">(null);
@@ -630,7 +630,7 @@ export default function DemoPresets() {
         if (!session?.user) throw new Error();
         user = session.user;
       } catch {
-        throw new Error("No hay sesión activa para aplicar stock");
+        throw new Error(t("presets.no_active_session", "No active user session to initialize inventory stock"));
       }
 
       // Consultar stock actual de todos los productos del preset
@@ -698,15 +698,15 @@ export default function DemoPresets() {
       }
 
       const liveTxt = generateLive
-        ? `, ${live.openOrders} mesas con pedido, ${live.historicSales} ventas demo, ${live.deliveries} domicilios`
+        ? `, ${live.openOrders} ${t("presets.live_orders", "tables with orders")}, ${live.historicSales} ${t("presets.live_sales", "demo sales")}, ${live.deliveries} ${t("presets.live_deliveries", "deliveries")}`
         : "";
       toast.success(
-        `Demo "${preset.business.name}" aplicado: ${createdCats} categorías, ${createdProds.length} productos, ${stocked} con stock${createdTables ? `, ${createdTables} mesas` : ""}${liveTxt}.`
+        `${t("presets.applied", "Demo applied")}: "${preset.business.name}" (${createdCats} ${t("common.categories", "categories")}, ${createdProds.length} ${t("common.products", "products")}, ${stocked} ${t("presets.in_stock", "with stock")}${createdTables ? `, ${createdTables} ${t("tables.title", "tables")}` : ""}${liveTxt}).`
       );
 
       qc.invalidateQueries();
     } catch (err: any) {
-      toast.error(err.message ?? "Error aplicando demo");
+      toast.error(err.message ?? t("presets.error", "Error applying demo"));
     } finally {
       setPending(null);
       setConfirmKind(null);
@@ -718,10 +718,9 @@ export default function DemoPresets() {
   return (
     <div className="glass p-6 space-y-4 border-dashed">
       <div>
-        <h3 className="font-semibold">Plantillas demo</h3>
+        <h3 className="font-semibold">{t("presets.title", "Demo Templates")}</h3>
         <p className="text-sm text-muted-foreground">
-          Aplica un preset completo (rebranding, categorías, productos, stock, mesas)
-          al negocio y sucursal activos. Es idempotente: no duplica lo existente.
+          {t("presets.desc", "Apply a complete preset (rebranding, categories, products, stock, tables) to the active business and branch. It is idempotent: does not duplicate existing items.")}
         </p>
       </div>
 
@@ -746,8 +745,8 @@ export default function DemoPresets() {
               </div>
               <p className="text-xs text-muted-foreground mb-2">{p.description}</p>
               <p className="text-xs text-muted-foreground">
-                {p.categories.length} categorías · {p.products.length} productos
-                {p.tables ? ` · ${p.tables.length} mesas` : ""}
+                {p.categories.length} {t("common.categories", "categories")} · {p.products.length} {t("common.products", "products")}
+                {p.tables ? ` · ${p.tables.length} ${t("tables.title", "tables")}` : ""}
               </p>
             </button>
           );
@@ -757,7 +756,7 @@ export default function DemoPresets() {
       <div className="flex items-center gap-3 pt-2 border-t">
         <Switch id="live-data" checked={generateLive} onCheckedChange={setGenerateLive} />
         <Label htmlFor="live-data" className="text-sm cursor-pointer">
-          Generar datos vivos: mesas con pedidos abiertos + 7 días de ventas + domicilios
+          {t("presets.live_data_label", "Generate live data: tables with open orders + 7 days of sales + deliveries")}
         </Label>
       </div>
 
@@ -765,29 +764,27 @@ export default function DemoPresets() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              ¿Aplicar demo {confirmKind ? PRESETS[confirmKind].label : ""}?
+              {t("presets.confirm_title", "Apply demo")} {confirmKind ? PRESETS[confirmKind].label : ""}?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>
-                  Se cambiará el nombre del negocio a{" "}
+                  {t("presets.confirm_p1", "The business name will be updated to")}{" "}
                   <strong>{confirmKind ? PRESETS[confirmKind].business.name : ""}</strong>{" "}
-                  y se agregarán categorías, productos, stock inicial y mesas a la sucursal activa.
+                  {t("presets.confirm_p2", "and categories, products, initial stock, and tables will be added to the active branch.")}
                 </p>
                 {generateLive && (
                   <p className="text-foreground">
-                    Además se generarán: <strong>4–6 mesas ocupadas</strong> con pedidos abiertos,{" "}
-                    <strong>~50 ventas</strong> de los últimos 7 días con caja cerrada por día, y{" "}
-                    <strong>5–8 domicilios</strong>.
+                    {t("presets.confirm_live", "Also generated: 4–6 occupied tables with open orders, ~50 sales from the past 7 days with daily cash reconciliation, and 5–8 delivery orders.")}
                   </p>
                 )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel", "Cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => confirmKind && applyPreset(confirmKind)}>
-              Aplicar
+              {t("presets.apply", "Apply")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

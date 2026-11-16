@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,6 +14,7 @@ const ROLES = ["owner", "admin", "manager", "cashier", "waiter", "courier", "kit
 
 export default function Employees() {
   const { tenantId, branchId } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -34,10 +36,10 @@ export default function Employees() {
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <div className="h-meta g-page-subtitle text-ink-400">NEGOCIO · PERSONAL</div>
-            <h1 className="h-display g-page-title">Empleados</h1>
+            <div className="h-meta g-page-subtitle text-ink-400">{t("employees.eyebrow", "BUSINESS · STAFF")}</div>
+            <h1 className="h-display g-page-title">{t("employees.title", "Employees")}</h1>
             <div className="h-meta g-page-subtitle text-ink-500">
-              {list.length} miembro{list.length !== 1 ? "s" : ""} del equipo
+              {list.length} {t("employees.subtitle", "team member(s)")}
             </div>
           </div>
         </div>
@@ -45,7 +47,7 @@ export default function Employees() {
           <DialogTrigger asChild>
             <button type="button" className="g-btn g-btn-primary">
               <Plus className="h-4 w-4" />
-              Nuevo empleado
+              {t("employees.new_employee", "New Employee")}
             </button>
           </DialogTrigger>
           <EmployeeForm
@@ -62,19 +64,19 @@ export default function Employees() {
           <div className="orb mx-auto mb-4">
             <Users className="h-7 w-7" />
           </div>
-          <h2 className="h-display font-semibold text-lg">Sin empleados</h2>
+          <h2 className="h-display font-semibold text-lg">{t("employees.empty_title", "No employees registered")}</h2>
           <p className="h-meta g-page-subtitle text-ink-500 mt-1">
-            Agrega los miembros de tu equipo para gestionar turnos y accesos.
+            {t("employees.empty_desc", "Add team members to assign roles, track shifts, and manage POS access.")}
           </p>
         </div>
       ) : (
         <div className="glass rounded-2xl overflow-hidden">
           <div className="grid grid-cols-[2fr_2fr_1fr_120px_90px] gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-400 border-b border-white/10">
-            <span>Nombre</span>
-            <span>Email</span>
-            <span>Teléfono</span>
-            <span>Rol</span>
-            <span>Estado</span>
+            <span>{t("employees.col_name", "Name")}</span>
+            <span>{t("employees.lbl_email", "Email")}</span>
+            <span>{t("suppliers.col_phone", "Phone")}</span>
+            <span>{t("employees.col_role", "Role")}</span>
+            <span>{t("employees.col_status", "Status")}</span>
           </div>
           {list.map((e: any, idx: number) => (
             <div
@@ -87,8 +89,8 @@ export default function Employees() {
               <span className="g-pill g-pill-ghost capitalize">{e.role}</span>
               <span>
                 {e.status === "active"
-                  ? <span className="g-pill g-pill-ok">Activo</span>
-                  : <span className="g-pill g-pill-ghost">{e.status}</span>
+                  ? <span className="g-pill g-pill-ok">{t("employees.active", "Active")}</span>
+                  : <span className="g-pill g-pill-ghost">{t("employees.inactive", "Inactive")}</span>
                 }
               </span>
             </div>
@@ -100,37 +102,38 @@ export default function Employees() {
 }
 
 function EmployeeForm({ tenantId, branchId, onClose }: { tenantId: string; branchId: string; onClose: () => void }) {
+  const { t } = useI18n();
   const [form, setForm] = useState<any>({ full_name: "", email: "", phone: "", role: "cashier", pin: "", status: "active" });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from("employees").insert({ ...form, tenant_id: tenantId, branch_id: branchId });
     if (error) return toast.error(error.message);
-    toast.success("Empleado creado");
+    toast.success(t("employees.created", "Employee created successfully"));
     onClose();
   };
 
   return (
     <DialogContent className="max-w-md">
-      <DialogHeader><DialogTitle>Nuevo empleado</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>{t("employees.dialog_new", "New Employee")}</DialogTitle></DialogHeader>
       <form onSubmit={submit} className="space-y-3">
         <div className="space-y-1.5">
-          <Label>Nombre completo</Label>
+          <Label>{t("employees.lbl_name", "Full Name *")}</Label>
           <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label>{t("employees.lbl_email", "Email")}</Label>
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div className="space-y-1.5">
-            <Label>Teléfono</Label>
+            <Label>{t("suppliers.lbl_phone", "Phone")}</Label>
             <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label>Rol</Label>
+            <Label>{t("employees.col_role", "Role")}</Label>
             <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -139,12 +142,12 @@ function EmployeeForm({ tenantId, branchId, onClose }: { tenantId: string; branc
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>PIN (4-6 dígitos)</Label>
+            <Label>{t("employees.lbl_pin", "PIN (4-6 digits)")}</Label>
             <Input value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} />
           </div>
         </div>
         <button type="submit" className="g-btn g-btn-primary w-full g-btn-touch">
-          Crear empleado
+          {t("employees.btn_save", "Create Employee")}
         </button>
       </form>
     </DialogContent>

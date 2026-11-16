@@ -10,12 +10,13 @@ import { CHANNELS, type SalesChannel } from "@/lib/channels";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Tags } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import "./channel-prices.css";
-
 
 export default function ChannelPrices() {
   const { tenantId, branches } = useTenantContext();
   const qc = useQueryClient();
+  const { t } = useI18n();
 
   // branchId === "" means "Global (all branches)"
   const [branchScope, setBranchScope] = useState<string>("__global__");
@@ -115,16 +116,16 @@ export default function ChannelPrices() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow="CATÁLOGO · PRECIOS"
-        title="Precios por canal"
-        description="Define un precio diferente para cada canal de venta. Deja vacío para usar el precio base."
+        eyebrow={t("channel_prices.eyebrow", "CATALOG · PRICING")}
+        title={t("channel_prices.title", "Prices by Sales Channel")}
+        description={t("channel_prices.desc", "Define custom pricing for each sales channel. Leave blank to inherit default base price.")}
         actions={
           <Select value={branchScope} onValueChange={setBranchScope}>
             <SelectTrigger className="w-[260px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="__global__">Global (todas las sucursales)</SelectItem>
+              <SelectItem value="__global__">{t("channel_prices.global_all", "Global (all branches)")}</SelectItem>
               {branches.map((b) => (
-                <SelectItem key={b.id} value={b.id}>Solo: {b.name}</SelectItem>
+                <SelectItem key={b.id} value={b.id}>{t("channel_prices.branch_only", "Branch")}: {b.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -132,12 +133,16 @@ export default function ChannelPrices() {
       />
 
       {!products || products.length === 0 ? (
-        <EmptyState icon={Tags} title="Sin productos" description="Crea productos primero en el módulo Productos" />
+        <EmptyState
+          icon={Tags}
+          title={t("channel_prices.no_products", "No products available")}
+          description={t("channel_prices.no_products_desc", "Create products first in the Products catalog")}
+        />
       ) : (
         <div className="glass rounded-2xl overflow-hidden">
           <div className="grid px-5 py-3 text-xs font-semibold text-ink-400 uppercase tracking-wider border-b border-[var(--g-hairline)] g-channel-grid">
-            <div>Producto</div>
-            <div className="text-right">Precio base</div>
+            <div>{t("channel_prices.col_product", "Product")}</div>
+            <div className="text-right">{t("channel_prices.col_base_price", "Base Price")}</div>
             {CHANNELS.map((c) => (
               <div key={c.id} className="text-right">{c.label}</div>
             ))}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,10 @@ import { Plus, Factory, CheckCircle2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-function StatusPill({ status }: { status: string }) {
-  if (status === "completed") return <span className="pill pill-ok">Completada</span>;
-  if (status === "in_progress" || status === "running") return <span className="pill pill-brand">En curso</span>;
-  return <span className="pill pill-ghost">Borrador</span>;
+function StatusPill({ status, t }: { status: string; t: (k: string, d?: string) => string }) {
+  if (status === "completed") return <span className="pill pill-ok">{t("production.status_completed", "Completed")}</span>;
+  if (status === "in_progress" || status === "running") return <span className="pill pill-brand">{t("production.status_running", "In Progress")}</span>;
+  return <span className="pill pill-ghost">{t("production.status_draft", "Draft")}</span>;
 }
 
 function ProgressBar({ pct, status }: { pct: number; status: string }) {
@@ -31,6 +32,7 @@ function ProgressBar({ pct, status }: { pct: number; status: string }) {
 
 export default function Production() {
   const { tenantId, branchId } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [completeOrder, setCompleteOrder] = useState<any | null>(null);
@@ -67,22 +69,23 @@ export default function Production() {
       {/* Header */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1">
-          <div className="h-display g-page-title">Producción</div>
-          <div className="h-meta g-page-subtitle">Recetas, lotes y órdenes · Sincronizado con inventario y KDS</div>
+          <div className="h-display g-page-title">{t("production.title", "Production")}</div>
+          <div className="h-meta g-page-subtitle">{t("production.subtitle", "Batches, recipes, and work orders · Synced with stock and KDS")}</div>
         </div>
         <div className="glass g-prod-header-date">
           <Calendar size={14} color="var(--ink-400)" />
-          <span>Hoy</span>
+          <span>{t("production.today", "Today")}</span>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <button type="button" className="g-btn g-btn-primary g-prod-header-btn">
-              <Plus size={14} /> Nueva orden
+              <Plus size={14} /> {t("production.new_order", "New Work Order")}
             </button>
           </DialogTrigger>
           <CreateOrderDialog
             tenantId={tenantId!} branchId={branchId!}
             products={recipeProducts ?? []}
+            t={t}
             onClose={() => { setCreateOpen(false); qc.invalidateQueries({ queryKey: ["production-orders"] }); }}
           />
         </Dialog>
@@ -91,10 +94,10 @@ export default function Production() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { l: "Órdenes hoy", v: String(stats.total), s: `${stats.running} en curso · ${stats.draft} en cola` },
-          { l: "Completadas",  v: String(stats.completed), s: "Hoy" },
-          { l: "En curso",     v: String(stats.running),   s: "activas ahora" },
-          { l: "Borradores",   v: String(stats.draft),     s: "pendientes de inicio" },
+          { l: t("production.orders_today", "Orders Today"), v: String(stats.total), s: `${stats.running} ${t("production.status_running", "in progress")} · ${stats.draft} ${t("production.status_draft", "queued")}` },
+          { l: t("production.completed", "Completed"),  v: String(stats.completed), s: t("production.today", "Today") },
+          { l: t("production.in_progress", "In Progress"), v: String(stats.running),   s: t("status.active", "active now") },
+          { l: t("production.draft", "Drafts"),   v: String(stats.draft),     s: t("status.pending", "pending start") },
         ].map((s, i) => (
           <div key={i} className="glass flex flex-col gap-1.5 p-4 rounded-2xl">
             <div className="h-label">{s.l}</div>
@@ -107,10 +110,10 @@ export default function Production() {
       {/* Filter pills */}
       <div className="flex items-center gap-2">
         {[
-          { id: "all",         label: `Todas · ${stats.total}` },
-          { id: "in_progress", label: `En curso · ${stats.running}` },
-          { id: "completed",   label: `Completadas · ${stats.completed}` },
-          { id: "draft",       label: `Borradores · ${stats.draft}` },
+          { id: "all",         label: `${t("common.all", "All")} · ${stats.total}` },
+          { id: "in_progress", label: `${t("production.in_progress", "In Progress")} · ${stats.running}` },
+          { id: "completed",   label: `${t("production.completed", "Completed")} · ${stats.completed}` },
+          { id: "draft",       label: `${t("production.draft", "Drafts")} · ${stats.draft}` },
         ].map((f) => (
           <button
             key={f.id} type="button"
@@ -125,14 +128,14 @@ export default function Production() {
       {/* Orders table */}
       <div className="glass g-table-p0 flex flex-col rounded-2xl overflow-hidden flex-1">
         <div className="g-prod-table-head">
-          <span>Producto</span><span>Planeado</span><span>Producido</span>
-          <span>Merma</span><span>Progreso</span><span>Estado</span><span />
+          <span>{t("products.col_name", "Product")}</span><span>{t("production.planned", "Planned")}</span><span>{t("production.produced", "Produced")}</span>
+          <span>{t("production.waste", "Waste")}</span><span>{t("production.progress", "Progress")}</span><span>{t("inventory.col_status", "Status")}</span><span />
         </div>
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Factory size={36} color="var(--ink-400)" opacity={0.3} />
-            <p className="h-meta text-center">Sin órdenes de producción</p>
+            <p className="h-meta text-center">{t("production.empty", "No production orders")}</p>
           </div>
         ) : (
           filtered.map((o: any, i: number) => {
@@ -150,7 +153,7 @@ export default function Production() {
                   <div className="min-w-0">
                     <div className="g-prod-name truncate">{o.products?.name}</div>
                     <div className="g-prod-date">
-                      {new Date(o.created_at).toLocaleString("es-CO", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(o.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
                 </div>
@@ -166,7 +169,7 @@ export default function Production() {
                   <ProgressBar pct={pct} status={o.status} />
                   {produced > 0 && <div className="g-prod-pct">{pct.toFixed(0)}%</div>}
                 </div>
-                <StatusPill status={o.status} />
+                <StatusPill status={o.status} t={t} />
                 <div className="flex justify-end">
                   {o.status !== "completed" && (
                     <button
@@ -174,7 +177,7 @@ export default function Production() {
                       className="g-btn g-btn-ghost g-btn-sm"
                       onClick={() => setCompleteOrder(o)}
                     >
-                      <CheckCircle2 size={13} /> Completar
+                      <CheckCircle2 size={13} /> {t("action.complete", "Complete")}
                     </button>
                   )}
                 </div>
@@ -187,6 +190,7 @@ export default function Production() {
       {completeOrder && (
         <CompleteOrderDialog
           order={completeOrder}
+          t={t}
           onClose={() => {
             setCompleteOrder(null);
             qc.invalidateQueries({ queryKey: ["production-orders"] });
@@ -198,7 +202,7 @@ export default function Production() {
   );
 }
 
-function CreateOrderDialog({ tenantId, branchId, products, onClose }: any) {
+function CreateOrderDialog({ tenantId, branchId, products, onClose, t }: any) {
   const [productId, setProductId] = useState("");
   const [planned, setPlanned] = useState("1");
   const [notes, setNotes] = useState("");
@@ -210,39 +214,39 @@ function CreateOrderDialog({ tenantId, branchId, products, onClose }: any) {
       planned_quantity: Number(planned), notes: notes || null, status: "draft",
     });
     if (error) return toast.error(error.message);
-    toast.success("Orden creada");
+    toast.success(t("production.order_created", "Work order created"));
     setProductId(""); setPlanned("1"); setNotes("");
     onClose();
   };
 
   return (
     <DialogContent className="max-w-md">
-      <DialogHeader><DialogTitle>Nueva orden de producción</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>{t("production.new_order", "New Work Order")}</DialogTitle></DialogHeader>
       <form onSubmit={submit} className="space-y-3">
         <div className="space-y-1.5">
-          <Label>Producto a producir</Label>
+          <Label>{t("production.product", "Product to Produce")}</Label>
           <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("common.select", "Select product...")} /></SelectTrigger>
             <SelectContent>
               {products.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Cantidad planeada</Label>
+          <Label>{t("production.quantity", "Planned Quantity")}</Label>
           <Input type="number" step="0.01" value={planned} onChange={(e) => setPlanned(e.target.value)} className="h-12 text-lg" />
         </div>
         <div className="space-y-1.5">
-          <Label>Notas</Label>
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" />
+          <Label>{t("production.notes", "Notes")}</Label>
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("common.optional", "Optional")} />
         </div>
-        <Button type="submit" className="w-full h-12" disabled={!productId}>Crear orden</Button>
+        <Button type="submit" className="w-full h-12" disabled={!productId}>{t("production.start", "Create Order")}</Button>
       </form>
     </DialogContent>
   );
 }
 
-function CompleteOrderDialog({ order, onClose }: { order: any | null; onClose: () => void }) {
+function CompleteOrderDialog({ order, onClose, t }: { order: any | null; onClose: () => void; t: (k: string, d?: string) => string }) {
   const [produced, setProduced] = useState("");
   const [waste, setWaste] = useState("0");
 
@@ -252,7 +256,7 @@ function CompleteOrderDialog({ order, onClose }: { order: any | null; onClose: (
       _order_id: order.id, _produced: Number(produced), _waste: Number(waste),
     });
     if (error) return toast.error(error.message);
-    toast.success("Orden completada · stock actualizado");
+    toast.success(t("production.order_completed", "Order completed · stock updated"));
     setProduced(""); setWaste("0");
     onClose();
   };
@@ -260,22 +264,22 @@ function CompleteOrderDialog({ order, onClose }: { order: any | null; onClose: (
   return (
     <Dialog open={!!order} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Completar orden</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t("production.complete", "Finish Batch")}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="text-sm text-muted-foreground">
-            {order?.products?.name} · planeado {Number(order?.planned_quantity ?? 0).toFixed(2)}
+            {order?.products?.name} · {t("production.planned", "planned")} {Number(order?.planned_quantity ?? 0).toFixed(2)}
           </div>
           <div className="space-y-1.5">
-            <Label>Producido</Label>
+            <Label>{t("production.produced", "Produced")}</Label>
             <Input type="number" step="0.01" value={produced} onChange={(e) => setProduced(e.target.value)}
               placeholder={String(order?.planned_quantity ?? "")} className="h-12 text-lg" />
           </div>
           <div className="space-y-1.5">
-            <Label>Merma</Label>
+            <Label>{t("production.waste", "Waste / Loss")}</Label>
             <Input type="number" step="0.01" value={waste} onChange={(e) => setWaste(e.target.value)} />
           </div>
           <Button size="lg" className="w-full" onClick={submit} disabled={!produced}>
-            Completar y descontar ingredientes
+            {t("production.complete", "Complete and Deduct Ingredients")}
           </Button>
         </div>
       </DialogContent>

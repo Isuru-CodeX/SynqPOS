@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -39,6 +40,7 @@ export function ProductGrid({
   thumbHeight = 96,
   columns: columnsProp,
 }: ProductGridProps) {
+  const { t } = useI18n();
   const viewportRef = useRef<HTMLDivElement>(null);
   const gridRef     = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0, scrollTop: 0 });
@@ -141,7 +143,7 @@ export function ProductGrid({
       </div>
 
       {products.length === 0 && (
-        <p className="text-center py-16 h-meta">No se encontraron productos</p>
+        <p className="text-center py-16 h-meta">{t("pos.no_products", "No products found")}</p>
       )}
     </div>
   );

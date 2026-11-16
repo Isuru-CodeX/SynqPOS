@@ -75,7 +75,7 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
       setCouponDiscount(0);
       return;
     }
-    if (!tenantId) return toast.error("No hay negocio activo para validar el cupón");
+    if (!tenantId) return toast.error(t("pos.coupon_no_tenant", "No active business to validate discount coupon"));
     setValidatingCoupon(true);
     try {
       const { data, error } = await supabase
@@ -89,20 +89,20 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
       const now = Date.now();
       if (!data || new Date(data.starts_at).getTime() > now || (data.expires_at && new Date(data.expires_at).getTime() < now)) {
         setCouponDiscount(0);
-        return toast.error("Cupón inválido o vencido");
+        return toast.error(t("pos.coupon_invalid", "Invalid or expired coupon"));
       }
       if (data.max_uses != null && Number(data.current_uses) >= Number(data.max_uses)) {
         setCouponDiscount(0);
-        return toast.error("Cupón sin usos disponibles");
+        return toast.error(t("pos.coupon_max_uses", "Coupon usage limit reached"));
       }
       const rawDiscount = data.discount_type === "percentage"
         ? total * (Number(data.discount_value) / 100)
         : Number(data.discount_value);
       const discount = Math.min(total, Math.max(0, Math.round(rawDiscount)));
       setCouponDiscount(discount);
-      toast.success(`Cupón aplicado · -${formatCurrency(discount)}`);
+      toast.success(t("pos.coupon_applied", `Coupon applied · -${formatCurrency(discount)}`));
     } catch (e: any) {
-      toast.error(e.message ?? "No se pudo validar el cupón");
+      toast.error(e.message ?? t("pos.coupon_error", "Failed to validate coupon"));
     } finally {
       setValidatingCoupon(false);
     }

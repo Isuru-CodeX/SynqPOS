@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rappi-web
 export default function RappiSettings() {
   const { tenantId, branchId, branches } = useTenantContext();
   const qc = useQueryClient();
+  const { t } = useI18n();
 
   const [storeId, setStoreId] = useState("");
   const [autoAccept, setAutoAccept] = useState(false);
@@ -68,7 +70,7 @@ export default function RappiSettings() {
 
   const save = async () => {
     if (!tenantId || !branchId) return;
-    if (!storeId.trim()) return toast.error("Ingresa el Store ID de Rappi");
+    if (!storeId.trim()) return toast.error(t("rappi.store_id_required", "Enter your Rappi Store ID"));
     setBusy("save");
     try {
       const payload = {
@@ -83,7 +85,7 @@ export default function RappiSettings() {
         ? await supabase.from("rappi_integrations").update(payload).eq("id", integ.id)
         : await supabase.from("rappi_integrations").insert(payload);
       if (error) throw error;
-      toast.success("Integración guardada");
+      toast.success(t("rappi.saved", "Integration settings saved successfully"));
       qc.invalidateQueries({ queryKey: ["rappi-integration"] });
     } catch (e: any) {
       toast.error(e.message);
@@ -98,8 +100,8 @@ export default function RappiSettings() {
         body: { branch_id: branchId, store_id: storeId || integ?.store_id },
       });
       if (error) throw error;
-      if (data?.ok) toast.success("Conexión OK con Rappi");
-      else toast.error(`Falló: ${data?.error ?? "verifica credenciales"}`);
+      if (data?.ok) toast.success(t("rappi.connection_ok", "Connection with Rappi verified successfully"));
+      else toast.error(t("rappi.connection_fail", `Connection failed: ${data?.error ?? "check credentials"}`));
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(null); }
   };
@@ -112,8 +114,8 @@ export default function RappiSettings() {
         body: { branch_id: branchId },
       });
       if (error) throw error;
-      if (data?.ok) toast.success(`Menú enviado · ${data.items} ítems`);
-      else toast.error(`Error: ${data?.error ?? "no se pudo enviar"}`);
+      if (data?.ok) toast.success(t("rappi.menu_synced", `Menu synced · ${data.items} items`));
+      else toast.error(t("rappi.menu_sync_error", `Error: ${data?.error ?? "failed to sync menu"}`));
       qc.invalidateQueries({ queryKey: ["rappi-integration"] });
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(null); }
@@ -121,10 +123,10 @@ export default function RappiSettings() {
 
   const copyWebhook = async () => {
     await navigator.clipboard.writeText(WEBHOOK_URL);
-    toast.success("URL del webhook copiada");
+    toast.success(t("rappi.webhook_copied", "Webhook URL copied to clipboard"));
   };
 
-  if (isLoading) return <div className="text-muted-foreground">Cargando…</div>;
+  if (isLoading) return <div className="text-muted-foreground">{t("common.loading", "Loading…")}</div>;
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -132,25 +134,25 @@ export default function RappiSettings() {
         <div>
           <div className="flex items-center gap-2">
             <PlugZap className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold">Integración con Rappi</h2>
+            <h2 className="text-lg font-bold">{t("rappi.title", "Rappi Integration")}</h2>
             {integ && (
               <Badge variant={status === "active" ? "default" : "outline"}>
-                {status === "active" ? "Activa" : "Pausada"}
+                {status === "active" ? t("common.active", "Active") : t("common.paused", "Paused")}
               </Badge>
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Sucursal: <strong>{branchName}</strong>. Cada sucursal usa su propio Store ID de Rappi Partners.
+            {t("rappi.branch", "Branch")}: <strong>{branchName}</strong>. {t("rappi.branch_notice", "Each branch uses its own Rappi Partners Store ID.")}
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label>Store ID (Rappi)</Label>
-            <Input value={storeId} onChange={(e) => setStoreId(e.target.value)} placeholder="Ej. 900123" />
+            <Label>{t("rappi.store_id", "Store ID (Rappi)")}</Label>
+            <Input value={storeId} onChange={(e) => setStoreId(e.target.value)} placeholder="e.g. 900123" />
           </div>
           <div>
-            <Label>Tiempo de preparación (min)</Label>
+            <Label>{t("rappi.prep_time", "Preparation Time (minutes)")}</Label>
             <Input
               type="number" min="1" max="120"
               value={prepTime}
@@ -158,62 +160,62 @@ export default function RappiSettings() {
             />
           </div>
           <div>
-            <Label>Estado</Label>
+            <Label>{t("rappi.status", "Status")}</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Activa</SelectItem>
-                <SelectItem value="paused">Pausada</SelectItem>
+                <SelectItem value="active">{t("common.active", "Active")}</SelectItem>
+                <SelectItem value="paused">{t("common.paused", "Paused")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center justify-between border rounded-md px-3 h-10 mt-6">
-            <Label className="cursor-pointer">Auto-aceptar pedidos</Label>
+            <Label className="cursor-pointer">{t("rappi.auto_accept", "Auto-accept Orders")}</Label>
             <Switch checked={autoAccept} onCheckedChange={setAutoAccept} />
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={save} disabled={busy === "save"}>
-            {busy === "save" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Guardar
+            {busy === "save" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} {t("action.save", "Save")}
           </Button>
           <Button variant="outline" onClick={test} disabled={busy === "test"}>
-            {busy === "test" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Probar conexión
+            {busy === "test" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} {t("rappi.test_conn", "Test Connection")}
           </Button>
           <Button variant="outline" onClick={syncMenu} disabled={busy === "sync" || !integ}>
             {busy === "sync" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-            Sincronizar menú
+            {t("rappi.sync_menu", "Sync Menu")}
           </Button>
           <a
             href="https://dev-portal.rappi.com/api/es/" target="_blank" rel="noreferrer"
             className="inline-flex items-center text-sm text-primary hover:underline ml-auto"
           >
-            <BookOpen className="h-4 w-4 mr-1" /> Documentación
+            <BookOpen className="h-4 w-4 mr-1" /> {t("rappi.documentation", "Documentation")}
           </a>
         </div>
 
         {integ?.last_menu_sync_at && (
           <p className="text-xs text-muted-foreground">
-            Último envío de menú: {formatDate(integ.last_menu_sync_at)}
+            {t("rappi.last_sync", "Last menu sync")}: {formatDate(integ.last_menu_sync_at)}
           </p>
         )}
 
         <div className="border-t pt-4">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">URL del Webhook</Label>
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("rappi.webhook_url", "Webhook URL")}</Label>
           <div className="flex gap-2 mt-1">
             <Input readOnly value={WEBHOOK_URL} className="font-mono text-xs" />
             <Button variant="outline" size="icon" onClick={copyWebhook}><Copy className="h-4 w-4" /></Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Pega esta URL en el Partner Portal de Rappi como destino de eventos (nuevos pedidos, cambios de estado).
+            {t("rappi.webhook_desc", "Paste this URL in the Rappi Partner Portal as your webhook endpoint (new orders, status updates).")}
           </p>
         </div>
       </div>
 
       <div className="glass p-4">
-        <div className="text-sm font-semibold mb-3">Últimos eventos recibidos</div>
+        <div className="text-sm font-semibold mb-3">{t("rappi.recent_events", "Recent Webhook Events")}</div>
         {(logs ?? []).length === 0 ? (
-          <div className="text-xs text-muted-foreground">Aún no hay eventos.</div>
+          <div className="text-xs text-muted-foreground">{t("rappi.no_events", "No events received yet.")}</div>
         ) : (
           <div className="space-y-2 max-h-[480px] overflow-auto">
             {logs!.map((l) => (
@@ -225,7 +227,7 @@ export default function RappiSettings() {
                   </Badge>
                 </div>
                 <div className="text-muted-foreground">{formatDate(l.created_at)}</div>
-                {l.rappi_order_id && <div>Pedido: {l.rappi_order_id}</div>}
+                {l.rappi_order_id && <div>{t("rappi.order", "Order")}: {l.rappi_order_id}</div>}
                 {l.error && <div className="text-destructive truncate">{l.error}</div>}
               </div>
             ))}

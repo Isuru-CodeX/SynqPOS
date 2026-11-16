@@ -20,6 +20,7 @@ import { resolvePrice } from "@/lib/channels";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TableOrderMobile } from "./TableOrderMobile";
 import { ITEM_STATUS_META, deriveOrderState, ORDER_STATE_META, countByStatus, type TableItemStatus } from "./itemStatus";
+import { useI18n } from "@/lib/i18n";
 import { db } from "@/lib/db";
 
 export default function TableOrder() {
@@ -27,6 +28,7 @@ export default function TableOrder() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { tenantId, branchId } = useTenantContext();
+  const { t } = useI18n();
   const { devMode } = useDevMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -245,7 +247,7 @@ export default function TableOrder() {
     if (!orderId) return;
     try {
       const data = await sendKitchenMutation.mutateAsync({ _order_id: orderId });
-      toast.success(`${data ?? 0} item(s) enviados a cocina`);
+      toast.success(`${data ?? 0} ${t("tables.items_sent_kitchen", "item(s) sent to kitchen")}`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -287,16 +289,16 @@ export default function TableOrder() {
   const sendToCashier = async () => {
     if (!orderId) return;
     const activeItems = (items ?? []).filter((i: any) => i.status !== "cancelled");
-    if (activeItems.length === 0) return toast.error("Agrega al menos un producto");
+    if (activeItems.length === 0) return toast.error(t("tables.add_at_least_one", "Add at least one product"));
     const ready = activeItems.some((i: any) => i.status === "ready" || i.status === "dispatched");
     if (!ready) {
-      const ok = confirm("Aún no marcas items como listos o servidos. ¿Enviar igualmente a caja?");
+      const ok = confirm(t("tables.confirm_send_cashier", "Items have not been marked as ready/served yet. Send to cashier anyway?"));
       if (!ok) return;
     }
 
     try {
       await sendCashierMutation.mutateAsync({ _order_id: orderId });
-      toast.success("Enviado a caja · El cajero podrá cobrar desde su pantalla");
+      toast.success(t("tables.sent_to_cashier_toast", "Sent to cashier · Cashier can now collect from their screen"));
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -334,28 +336,27 @@ export default function TableOrder() {
         _discount_total: discountAmount,
         _coupon_code: couponCode ?? null,
       });
-      toast.success("Cobro registrado");
+      toast.success(t("tables.payment_recorded", "Payment recorded successfully"));
       setPayOpen(false);
       qc.invalidateQueries({ queryKey: ["table-orders-open"] });
       qc.invalidateQueries({ queryKey: ["tables"] });
       navigate("/tables");
     } catch (err: any) {
-      toast.error(err.message ?? "Error al cobrar");
+      toast.error(err.message ?? t("tables.charge_error", "Error processing payment"));
     } finally { setSubmitting(false); }
   };
 
   const cancelOrder = async () => {
     if (!orderId || !order) return;
-    if (!confirm("¿Cancelar este pedido? Se revertirán los items despachados.")) return;
-    // Revertir despachos
+    if (!confirm(t("tables.cancel_confirm", "Cancel this order? Dispatched items will be restored."))) return;
+    // Revert items
     for (const it of (items ?? [])) {
       if (it.status === "dispatched") {
         await supabase.rpc("undispatch_table_item", { _item_id: it.id });
       }
     }
     await supabase.from("table_orders").update({ status: "cancelled", closed_at: new Date().toISOString() }).eq("id", orderId);
-    // Manual status update removed: handled by database trigger
-    toast.success("Pedido cancelado");
+    toast.success(t("tables.order_cancelled_toast", "Order cancelled"));
     qc.invalidateQueries({ queryKey: ["table-orders-open"] });
     qc.invalidateQueries({ queryKey: ["tables"] });
     navigate("/tables");
@@ -363,12 +364,12 @@ export default function TableOrder() {
 
   const isMobile = useIsMobile();
 
-  // ── Estados de carga y error ──────────────────────────────────────────────
+  // ── Loading and error states ──────────────────────────────────────────────
   if (loadingOrder) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-3 text-[var(--ink-400)]">
         <div className="h-8 w-8 rounded-full border-4 border-[var(--brand-600)] border-t-transparent animate-spin" />
-        <p className="h-meta">Abriendo pedido...</p>
+        <p className="h-meta">{t("tables.loading_order", "Opening order…")}</p>
       </div>
     );
   }
@@ -377,12 +378,12 @@ export default function TableOrder() {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
         <div className="text-4xl">⚠️</div>
-        <p className="font-semibold text-[var(--ink-900)]">No se pudo cargar el pedido</p>
+        <p className="font-semibold text-[var(--ink-900)]">{t("tables.load_order_error", "Could not load order")}</p>
         <p className="h-meta">
-          {(orderError as any)?.message ?? "El pedido no existe o fue cancelado."}
+          {(orderError as any)?.message ?? t("tables.order_not_found", "The order does not exist or was cancelled.")}
         </p>
         <button type="button" className="g-btn g-btn-ghost" onClick={() => navigate("/tables")}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Volver a mesas
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t("tables.back_to_tables", "Back to Tables")}
         </button>
       </div>
     );
@@ -428,12 +429,12 @@ export default function TableOrder() {
         <Dialog open={!!pendingDetailProduct} onOpenChange={(o) => { if (!o) setPendingDetailProduct(null); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Detalle para {pendingDetailProduct?.name}</DialogTitle>
+              <DialogTitle>{t("tables.detail_for", "Details for")} {pendingDetailProduct?.name}</DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
-              <p className="h-meta">Este producto requiere un detalle que se enviará al KDS de cocina.</p>
+              <p className="h-meta">{t("tables.detail_required_hint", "This item requires a specification that will be sent to the kitchen KDS.")}</p>
               <Textarea
-                placeholder="Ej: Término 3/4, sin cebolla, extra salsa…"
+                placeholder={t("tables.detail_placeholder", "e.g., Medium rare, no onions, extra dressing...")}
                 value={detailInput}
                 onChange={e => setDetailInput(e.target.value)}
                 autoFocus
@@ -441,8 +442,8 @@ export default function TableOrder() {
               />
             </div>
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setPendingDetailProduct(null)}>Cancelar</Button>
-              <Button onClick={confirmDetail} disabled={!detailInput.trim()}>Agregar al pedido</Button>
+              <Button variant="outline" onClick={() => setPendingDetailProduct(null)}>{t("common.cancel", "Cancel")}</Button>
+              <Button onClick={confirmDetail} disabled={!detailInput.trim()}>{t("tables.add_to_order", "Add to order")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -455,24 +456,24 @@ export default function TableOrder() {
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--g-hairline)] glass-thin shrink-0">
         <button type="button" className="g-btn g-btn-ghost" onClick={() => navigate("/tables")}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Mesas
+          <ArrowLeft className="h-4 w-4 mr-1" /> {t("tables.title", "Tables")}
         </button>
-        <div className="g-title-18">{(order as any).tables?.name ?? "Mesa"}</div>
-        {sent && <span className="g-pill g-pill-warn g-pill-h22">Enviado a caja</span>}
-        {isOpen && <span className="g-pill g-pill-brand g-pill-h22">Abierto</span>}
+        <div className="g-title-18">{(order as any).tables?.name ?? t("tables.table", "Table")}</div>
+        {sent && <span className="g-pill g-pill-warn g-pill-h22">{t("tables.sent_to_cashier", "Sent to Cashier")}</span>}
+        {isOpen && <span className="g-pill g-pill-brand g-pill-h22">{t("status.open", "Open")}</span>}
         {waiterName ? (
           <span className="h-meta">
-            Mesero: <span className="font-semibold text-[var(--ink-700)]">{waiterName}</span>
+            {t("tables.waiter", "Waiter")}: <span className="font-semibold text-[var(--ink-700)]">{waiterName}</span>
           </span>
         ) : !(order as any)?.waiter_id ? (
-          <span className="text-xs font-semibold text-[var(--brand-600)]">📱 Pedido QR</span>
+          <span className="text-xs font-semibold text-[var(--brand-600)]">📱 {t("tables.qr_order", "QR Order")}</span>
         ) : null}
         <div className="flex-1" />
         {isOpen && (
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-400)]" />
             <Input
-              placeholder="Buscar producto..."
+              placeholder={t("products.search", "Search products...")}
               className="pl-9 h-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -496,7 +497,7 @@ export default function TableOrder() {
                       className={cn("g-pill g-pill-h28 transition-all", selectedCategory === "all" ? "g-pill-brand" : "g-pill-ghost")}
                       onClick={() => setSelectedCategory("all")}
                     >
-                      Todos
+                      {t("common.all", "All")}
                     </button>
                     {(categories ?? []).map((cat: any) => (
                       <button
@@ -528,14 +529,14 @@ export default function TableOrder() {
                     </button>
                   ))}
                   {filtered.length === 0 && (
-                    <div className="col-span-full text-center py-12 h-meta">Sin productos</div>
+                    <div className="col-span-full text-center py-12 h-meta">{t("tables.no_products", "No products")}</div>
                   )}
                 </div>
               </ScrollArea>
             </>
           ) : (
             <div className="flex-1 grid place-items-center h-meta p-8 text-center">
-              Pedido enviado a caja. Pendiente de cobro por el cajero.
+              {t("tables.sent_to_cashier_desc", "Order sent to cashier. Pending payment.")}
             </div>
           )}
         </div>
@@ -547,7 +548,7 @@ export default function TableOrder() {
           <div className="px-4 py-3 border-b border-[var(--g-hairline)] space-y-2 shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <div className="h-label uppercase tracking-wider">Pedido</div>
+                <div className="h-label uppercase tracking-wider">{t("tables.order", "Order")}</div>
                 <div className="text-sm text-[var(--ink-700)]">
                   {(items ?? []).length} items ·{" "}
                   <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-bold", ORDER_STATE_META[deriveOrderState(order.status, items ?? [])].tone)}>
@@ -562,10 +563,10 @@ export default function TableOrder() {
               const c = countByStatus(items ?? []);
               return (
                 <div className="flex flex-wrap gap-1">
-                  {c.pending > 0 && <span className="g-pill g-pill-ghost g-pill-h20">{c.pending} pend</span>}
-                  {c.preparing > 0 && <span className="g-pill g-pill-warn g-pill-h20">{c.preparing} prep</span>}
-                  {c.ready > 0 && <span className="g-pill g-pill-sky g-pill-h20">{c.ready} listo</span>}
-                  {c.dispatched > 0 && <span className="g-pill g-pill-ok g-pill-h20">{c.dispatched} servido</span>}
+                  {c.pending > 0 && <span className="g-pill g-pill-ghost g-pill-h20">{c.pending} {t("tables.short_pending", "pend")}</span>}
+                  {c.preparing > 0 && <span className="g-pill g-pill-warn g-pill-h20">{c.preparing} {t("tables.short_prep", "prep")}</span>}
+                  {c.ready > 0 && <span className="g-pill g-pill-sky g-pill-h20">{c.ready} {t("tables.short_ready", "ready")}</span>}
+                  {c.dispatched > 0 && <span className="g-pill g-pill-ok g-pill-h20">{c.dispatched} {t("tables.short_served", "served")}</span>}
                 </div>
               );
             })()}
@@ -581,7 +582,7 @@ export default function TableOrder() {
                     disabled={c.pending === 0}
                     onClick={sendAllToKitchen}
                   >
-                    <ChefHat className="h-3 w-3 mr-1" /> A cocina
+                    <ChefHat className="h-3 w-3 mr-1" /> {t("tables.to_kitchen", "To Kitchen")}
                   </button>
                   <button
                     type="button"
@@ -589,7 +590,7 @@ export default function TableOrder() {
                     disabled={c.preparing === 0 && c.pending === 0}
                     onClick={markAllReady}
                   >
-                    <Bell className="h-3 w-3 mr-1" /> Marcar listo
+                    <Bell className="h-3 w-3 mr-1" /> {t("tables.mark_ready", "Mark Ready")}
                   </button>
                 </div>
               );
@@ -601,7 +602,7 @@ export default function TableOrder() {
             <div className="p-3 space-y-2">
               {(items ?? []).length === 0 && (
                 <div className="text-center h-meta py-12">
-                  Sin productos. Agrega desde la izquierda.
+                  {t("tables.no_items_desc", "No items. Add products from the list.")}
                 </div>
               )}
               {(items ?? []).map((it) => {
@@ -679,7 +680,7 @@ export default function TableOrder() {
                         <button type="button" aria-label="Aumentar cantidad" className="g-btn g-btn-ghost h-7 w-7 p-0" onClick={() => setQty(it, Number(it.quantity) + 1)}>
                           <Plus className="h-3 w-3" />
                         </button>
-                        <button type="button" aria-label="Eliminar ítem" className="g-btn g-btn-ghost h-7 w-7 p-0 text-[var(--g-bad)]" onClick={() => setQty(it, 0)}>
+                        <button type="button" aria-label={t("common.delete", "Delete")} className="g-btn g-btn-ghost h-7 w-7 p-0 text-[var(--g-bad)]" onClick={() => setQty(it, 0)}>
                           <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
@@ -687,7 +688,7 @@ export default function TableOrder() {
                     {dispatched && isOpen && (
                       <div className="flex justify-end">
                         <button type="button" className="g-btn g-btn-ghost h-7 text-xs" onClick={() => undispatchItem(it)}>
-                          <RotateCcw className="h-3 w-3 mr-1" /> Revertir
+                          <RotateCcw className="h-3 w-3 mr-1" /> {t("tables.revert", "Revert")}
                         </button>
                       </div>
                     )}
@@ -700,21 +701,21 @@ export default function TableOrder() {
           {/* Totals & action footer */}
           <div className="border-t border-[var(--g-hairline)] p-4 space-y-3 glass-thin shrink-0">
             <div className="flex items-baseline justify-between">
-              <span className="h-label">Subtotal</span>
+              <span className="h-label">{t("common.subtotal", "Subtotal")}</span>
               <span className="tabular-nums text-[var(--ink-700)]">{formatCurrency(Number(order.subtotal))}</span>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="h-label">Impuestos</span>
+              <span className="h-label">{t("common.taxes", "Taxes")}</span>
               <span className="tabular-nums text-[var(--ink-700)]">{formatCurrency(Number(order.tax_total))}</span>
             </div>
             <div className="flex items-baseline justify-between border-t border-[var(--g-hairline)] pt-2">
-              <span className="font-bold text-[var(--ink-900)]">Total</span>
+              <span className="font-bold text-[var(--ink-900)]">{t("common.total", "Total")}</span>
               <span className="h-num text-2xl text-[var(--brand-600)]">{formatCurrency(Number(order.total))}</span>
             </div>
             {isOpen && (
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" className="g-btn g-btn-ghost" onClick={cancelOrder}>
-                  <Trash2 className="h-4 w-4 mr-2" /> Cancelar
+                  <Trash2 className="h-4 w-4 mr-2" /> {t("action.cancel", "Cancel")}
                 </button>
                 <button
                   type="button"
@@ -722,7 +723,7 @@ export default function TableOrder() {
                   onClick={sendToCashier}
                   disabled={(items ?? []).length === 0}
                 >
-                  <Send className="h-4 w-4 mr-2" /> Enviar a caja
+                  <Send className="h-4 w-4 mr-2" /> {t("tables.send_to_cashier", "Send to Cashier")}
                 </button>
               </div>
             )}
@@ -733,7 +734,7 @@ export default function TableOrder() {
                 onClick={() => setPayOpen(true)}
                 disabled={Number(order.total) <= 0}
               >
-                <CreditCard className="h-5 w-5 mr-2" /> Cobrar {formatCurrency(Number(order.total))}
+                <CreditCard className="h-5 w-5 mr-2" /> {t("action.charge", "Charge")} {formatCurrency(Number(order.total))}
               </button>
             )}
           </div>
@@ -752,12 +753,12 @@ export default function TableOrder() {
       <Dialog open={!!pendingDetailProduct} onOpenChange={(o) => { if (!o) setPendingDetailProduct(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Detalle para {pendingDetailProduct?.name}</DialogTitle>
+            <DialogTitle>{t("tables.detail_for", "Details for")} {pendingDetailProduct?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <p className="h-meta">Este producto requiere un detalle que se enviará al KDS de cocina.</p>
+            <p className="h-meta">{t("tables.detail_required_hint", "This item requires a specification that will be sent to the kitchen KDS.")}</p>
             <Textarea
-              placeholder="Ej: Término 3/4, sin cebolla, extra salsa…"
+              placeholder={t("tables.detail_placeholder", "e.g., Medium rare, no onions, extra dressing...")}
               value={detailInput}
               onChange={e => setDetailInput(e.target.value)}
               autoFocus
@@ -765,8 +766,8 @@ export default function TableOrder() {
             />
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setPendingDetailProduct(null)}>Cancelar</Button>
-            <Button onClick={confirmDetail} disabled={!detailInput.trim()}>Agregar al pedido</Button>
+            <Button variant="outline" onClick={() => setPendingDetailProduct(null)}>{t("common.cancel", "Cancel")}</Button>
+            <Button onClick={confirmDetail} disabled={!detailInput.trim()}>{t("tables.add_to_order", "Add to order")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

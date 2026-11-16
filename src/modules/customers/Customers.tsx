@@ -64,13 +64,13 @@ export default function Customers() {
       }
     },
     onSuccess: () => {
-      toast.success(editing ? "Cliente actualizado" : "Cliente creado");
+      toast.success(editing ? t("customers.updated", "Customer updated") : t("customers.created", "Customer created"));
       qc.invalidateQueries({ queryKey: ["customers"] });
       setOpen(false);
       setEditing(null);
       setForm(empty);
     },
-    onError: (e: any) => toast.error(e.message ?? "Error al guardar"),
+    onError: (e: any) => toast.error(e.message ?? t("common.save_error", "Error saving")),
   });
 
   const remove = useMutation({
@@ -79,10 +79,10 @@ export default function Customers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Cliente eliminado");
+      toast.success(t("customers.deleted", "Customer deleted"));
       qc.invalidateQueries({ queryKey: ["customers"] });
     },
-    onError: (e: any) => toast.error(e.message ?? "Error al eliminar"),
+    onError: (e: any) => toast.error(e.message ?? t("common.delete_error", "Error deleting")),
   });
 
   const openCreate = () => { setEditing(null); setForm(empty); setOpen(true); };
@@ -138,20 +138,20 @@ export default function Customers() {
           <div className="orb mx-auto mb-4">
             <Users className="h-7 w-7" />
           </div>
-          <h2 className="h-display font-semibold text-lg">Sin clientes</h2>
+          <h2 className="h-display font-semibold text-lg">{t("customers.no_customers", "No customers found")}</h2>
           <p className="h-meta g-page-subtitle text-ink-500 mt-1">
-            Registra tus clientes para vincularlos a ventas y ver su historial.
+            {t("customers.register_prompt", "Register customers to track sales history and loyalty rewards.")}
           </p>
         </div>
       ) : (
         <div className="glass rounded-2xl overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-[2fr_1fr_2fr_2fr_100px_72px] gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-400 border-b border-white/10">
-            <span>Nombre</span>
-            <span>Documento</span>
-            <span>Contacto</span>
-            <span>Dirección</span>
-            <span className="text-right">Puntos</span>
+            <span>{t("customers.col_name", "Name")}</span>
+            <span>{t("customers.col_document", "Document / ID")}</span>
+            <span>{t("customers.col_contact", "Contact")}</span>
+            <span>{t("common.address", "Address")}</span>
+            <span className="text-right">{t("customers.col_points", "Points")}</span>
             <span />
           </div>
 
@@ -195,7 +195,7 @@ export default function Customers() {
               <div className="flex gap-1 justify-end">
                 <button
                   type="button"
-                  aria-label="Editar cliente"
+                  aria-label={t("customers.edit", "Edit Customer")}
                   className="g-btn g-btn-ghost h-8 w-8 p-0 flex items-center justify-center"
                   onClick={() => openEdit(c)}
                 >
@@ -203,9 +203,9 @@ export default function Customers() {
                 </button>
                 <button
                   type="button"
-                  aria-label="Eliminar cliente"
+                  aria-label={t("action.delete", "Delete")}
                   className="g-btn g-btn-ghost h-8 w-8 p-0 flex items-center justify-center text-g-bad"
-                  onClick={() => { if (confirm("¿Eliminar cliente?")) remove.mutate(c.id); }}
+                  onClick={() => { if (confirm(t("customers.confirm_delete", "Delete customer?"))) remove.mutate(c.id); }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -219,30 +219,30 @@ export default function Customers() {
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
+            <DialogTitle>{editing ? t("customers.edit", "Edit Customer") : t("customers.new_customer", "New Customer")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Nombre *</Label>
-              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Nombre completo o razón social" />
+              <Label>{t("customers.col_name", "Name")} *</Label>
+              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("customers.name_placeholder", "Full name or business name")} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>NIT / CC</Label>
+                <Label>{t("customers.col_document", "ID / Tax ID")}</Label>
                 <Input value={form.document_number} onChange={(e) => setForm((f) => ({ ...f, document_number: e.target.value }))} placeholder="123456789" />
               </div>
               <div className="space-y-1.5">
-                <Label>Teléfono</Label>
+                <Label>{t("common.phone", "Phone")}</Label>
                 <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="300 000 0000" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Correo electrónico</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="cliente@email.com" />
+              <Label>{t("common.email", "Email")}</Label>
+              <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="customer@example.com" />
             </div>
             <div className="space-y-1.5">
-              <Label>Dirección</Label>
-              <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Calle 123 # 45-67" />
+              <Label>{t("common.address", "Address")}</Label>
+              <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="123 Main St" />
             </div>
             <button
               type="button"
@@ -250,7 +250,7 @@ export default function Customers() {
               disabled={!form.name.trim() || save.isPending}
               onClick={() => save.mutate(form)}
             >
-              {save.isPending ? "Guardando..." : editing ? "Guardar cambios" : "Crear cliente"}
+              {save.isPending ? t("common.saving", "Saving...") : editing ? t("customers.save_changes", "Save Changes") : t("customers.create", "Create Customer")}
             </button>
           </div>
         </DialogContent>

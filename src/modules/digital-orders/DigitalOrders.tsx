@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
   onConfirm: (id: string) => void;
   onRappiAction: (id: string, action: string) => void;
 }) {
+  const { t } = useI18n();
   const isRappi = order.channel === "rappi" && order.rappi_order_id;
   const ext = order.external_status;
 
@@ -83,8 +85,8 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
 
   const minutesAgo = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000);
   const timeLabel = minutesAgo < 60
-    ? `hace ${minutesAgo} min`
-    : `hace ${Math.floor(minutesAgo / 60)}h ${minutesAgo % 60}min`;
+    ? `${minutesAgo} min ago`
+    : `${Math.floor(minutesAgo / 60)}h ${minutesAgo % 60}min ago`;
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -116,7 +118,7 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
           <div>
             <div className="flex items-center gap-1.5 h-meta uppercase tracking-wider mb-2">
               <ClipboardList size={12} />
-              Ítems del pedido
+              {t("digital.items_title", "Order Items")}
             </div>
             {order.digital_order_items?.length > 0 ? (
               <div className="space-y-1.5">
@@ -135,7 +137,7 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
                 ))}
               </div>
             ) : (
-              <p className="h-meta">Sin ítems registrados</p>
+              <p className="h-meta">{t("digital.no_items", "No items registered")}</p>
             )}
           </div>
 
@@ -144,17 +146,17 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
           {/* Totals */}
           <div className="space-y-1 text-sm">
             <div className="flex justify-between text-ink-500">
-              <span>Subtotal</span>
+              <span>{t("pos.subtotal", "Subtotal")}</span>
               <span className="tabular-nums">{formatCurrency(Number(order.gross_total))}</span>
             </div>
             {Number(order.platform_commission) > 0 && (
               <div className="flex justify-between text-red-500">
-                <span>Comisión</span>
+                <span>{t("digital.commission", "Commission")}</span>
                 <span className="tabular-nums">−{formatCurrency(Number(order.platform_commission))}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--hairline)]">
-              <span className="text-ink-900">Total</span>
+              <span className="text-ink-900">{t("common.total", "Total")}</span>
               <span className="tabular-nums text-brand-600">{formatCurrency(Number(order.net_total))}</span>
             </div>
           </div>
@@ -166,7 +168,7 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
               <div>
                 <div className="flex items-center gap-1.5 h-meta uppercase tracking-wider mb-2">
                   <MapPin size={12} />
-                  Dirección de entrega
+                  {t("delivery.address", "Delivery Address")}
                 </div>
                 <p className="text-sm font-medium glass-thin rounded-xl px-3 py-2">
                   {order.delivery_address}
@@ -182,7 +184,7 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
               <div>
                 <div className="flex items-center gap-1.5 h-meta uppercase tracking-wider mb-2">
                   <User size={12} />
-                  Notas del pedido
+                  {t("digital.notes", "Order Notes")}
                 </div>
                 <div className="space-y-1">
                   {notesParts.map((part, i) => (
@@ -196,23 +198,23 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
 
         {/* Actions */}
         <div className="px-5 py-3 border-t border-[var(--hairline)] flex gap-2 flex-wrap justify-end">
-          <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={onClose}>Cerrar</button>
+          <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={onClose}>{t("common.close", "Close")}</button>
           {!order.sale_id && order.status !== "cancelled" && (
             <button type="button" className="g-btn g-btn-primary g-btn-sm" onClick={() => { onConfirm(order.id); onClose(); }}>
-              Confirmar venta
+              {t("digital.confirm_sale", "Confirm Sale")}
             </button>
           )}
           {isRappi && (ext === "pending" || !ext) && (
             <>
-              <button type="button" className="g-btn g-btn-primary g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "take")}>Aceptar</button>
-              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "reject")}>Rechazar</button>
+              <button type="button" className="g-btn g-btn-primary g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "take")}>{t("digital.accept", "Accept")}</button>
+              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "reject")}>{t("digital.reject", "Reject")}</button>
             </>
           )}
           {isRappi && ext === "accepted" && (
-            <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "ready")}>Marcar listo</button>
+            <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "ready")}>{t("kds.ready", "Ready")}</button>
           )}
           {isRappi && ext === "ready" && (
-            <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "dispatched")}>Despachado</button>
+            <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => onRappiAction(order.rappi_order_id!, "dispatched")}>{t("delivery.dispatched", "Dispatched")}</button>
           )}
         </div>
       </DialogContent>
@@ -222,6 +224,7 @@ function ComandaModal({ order, onClose, onConfirm, onRappiAction }: {
 
 export default function DigitalOrders() {
   const { tenantId, branchId, branches } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
 
   const [open, setOpen] = useState(false);
@@ -269,10 +272,10 @@ export default function DigitalOrders() {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast.success(`Acción "${action}" enviada a Rappi`);
+      toast.success(t("digital.action_sent", `Action "${action}" sent to Rappi`));
       qc.invalidateQueries({ queryKey: ["digital-orders"] });
     } catch (e: any) {
-      toast.error(e.message ?? "No se pudo enviar la acción");
+      toast.error(e.message ?? t("digital.action_failed", "Could not send action"));
     }
   };
 
@@ -280,13 +283,13 @@ export default function DigitalOrders() {
     try {
       const { error } = await supabase.rpc("confirm_digital_order" as any, { _order_id: orderId });
       if (error) throw error;
-      toast.success("Pedido confirmado como venta");
+      toast.success(t("digital.confirmed_sale", "Order confirmed as sale"));
       qc.invalidateQueries({ queryKey: ["digital-orders"] });
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["pos-stocks"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
     } catch (e: any) {
-      toast.error(e.message ?? "No se pudo confirmar el pedido");
+      toast.error(e.message ?? t("digital.confirm_failed", "Could not confirm order"));
     }
   };
 
@@ -374,7 +377,7 @@ export default function DigitalOrders() {
 
   const submit = async () => {
     if (!tenantId || !branchId) return;
-    if (lines.length === 0) return toast.error("Agrega productos");
+    if (lines.length === 0) return toast.error(t("digital.add_products_error", "Please add products"));
     setSubmitting(true);
     try {
       const itemsPayload = lines.map((l) => ({
@@ -394,7 +397,7 @@ export default function DigitalOrders() {
         _notes: notes || null,
       });
       if (error) throw error;
-      toast.success("Pedido digital registrado");
+      toast.success(t("digital.order_registered", "Digital order registered"));
       qc.invalidateQueries({ queryKey: ["digital-orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
       setOpen(false);
@@ -411,35 +414,35 @@ export default function DigitalOrders() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        eyebrow="OPERACIÓN · PLATAFORMAS"
-        title="Pedidos digitales"
-        description={`Rappi, plataformas y otros canales digitales · ${branchName}`}
+        eyebrow={t("digital.eyebrow", "OPERATIONS · PLATFORMS")}
+        title={t("digital.title", "Digital Orders")}
+        description={`${t("digital.description", "Rappi, platforms, and other digital channels")} · ${branchName}`}
         actions={
           <button type="button" className="g-btn g-btn-primary" onClick={() => { resetForm(); setOpen(true); }}>
-            <Plus size={15} className="mr-1" /> Nuevo pedido
+            <Plus size={15} className="mr-1" /> {t("digital.new_order", "New Order")}
           </button>
         }
       />
 
       {isLoading ? (
-        <div className="h-meta py-6">Cargando…</div>
+        <div className="h-meta py-6">{t("common.loading", "Loading...")}</div>
       ) : !orders || orders.length === 0 ? (
         <EmptyState
           icon={Smartphone}
-          title="Sin pedidos digitales"
-          description="Registra pedidos de Rappi u otras plataformas para llevar control de comisiones y ventas netas"
+          title={t("digital.empty_title", "No digital orders")}
+          description={t("digital.empty_desc", "Record orders from Rappi or other platforms to track commissions and net sales")}
         />
       ) : (
         <div className="glass rounded-2xl overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-[100px_140px_110px_1fr_110px_110px_190px] px-5 py-3 border-b border-[var(--hairline)] text-[11px] font-semibold uppercase tracking-wider text-ink-500">
-            <div>Canal</div>
-            <div>Pedido</div>
-            <div>Estado</div>
-            <div className="text-right">Bruto</div>
-            <div className="text-right">Comisión</div>
-            <div className="text-right">Neto</div>
-            <div className="text-right">Acciones</div>
+            <div>{t("digital.channel", "Channel")}</div>
+            <div>{t("digital.order", "Order")}</div>
+            <div>{t("digital.status", "Status")}</div>
+            <div className="text-right">{t("digital.gross", "Gross")}</div>
+            <div className="text-right">{t("digital.commission", "Commission")}</div>
+            <div className="text-right">{t("digital.net", "Net")}</div>
+            <div className="text-right">{t("digital.actions", "Actions")}</div>
           </div>
 
           <div className="divide-y divide-[var(--hairline)]">
@@ -478,24 +481,24 @@ export default function DigitalOrders() {
                       onClick={() => setSelectedOrder(o)}
                     >
                       <ClipboardList size={12} />
-                      Comanda{itemCount > 0 ? ` (${itemCount})` : ""}
+                      {t("digital.ticket", "Order Slip")}{itemCount > 0 ? ` (${itemCount})` : ""}
                     </button>
                     {!o.sale_id && o.status !== "cancelled" && (
                       <button type="button" className="g-btn g-btn-primary g-btn-sm" onClick={() => confirmOrder(o.id)}>
-                        Confirmar
+                        {t("digital.confirm", "Confirm")}
                       </button>
                     )}
                     {isRappi && (ext === "pending" || !ext) && (
                       <>
-                        <button type="button" className="g-btn g-btn-primary g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "take")}>Aceptar</button>
-                        <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "reject")}>Rechazar</button>
+                        <button type="button" className="g-btn g-btn-primary g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "take")}>{t("digital.accept", "Accept")}</button>
+                        <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "reject")}>{t("digital.reject", "Reject")}</button>
                       </>
                     )}
                     {isRappi && ext === "accepted" && (
-                      <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "ready")}>Marcar listo</button>
+                      <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "ready")}>{t("kds.ready", "Ready")}</button>
                     )}
                     {isRappi && ext === "ready" && (
-                      <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "dispatched")}>Despachado</button>
+                      <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => rappiAction(o.rappi_order_id!, "dispatched")}>{t("delivery.dispatched", "Dispatched")}</button>
                     )}
                   </div>
                 </div>
@@ -517,12 +520,12 @@ export default function DigitalOrders() {
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Nuevo pedido digital</DialogTitle>
+            <DialogTitle>{t("digital.modal_title", "New Digital Order")}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div>
-                <Label>Plataforma</Label>
+                <Label>{t("digital.platform", "Platform")}</Label>
                 <Select value={channel} onValueChange={(v) => setChannel(v as SalesChannel)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -533,11 +536,11 @@ export default function DigitalOrders() {
                 </Select>
               </div>
               <div>
-                <Label>N° de pedido externo</Label>
-                <Input value={externalNo} onChange={(e) => setExternalNo(e.target.value)} placeholder="Ej. RAP-12345" />
+                <Label>{t("digital.external_no", "External Order #")}</Label>
+                <Input value={externalNo} onChange={(e) => setExternalNo(e.target.value)} placeholder="Ex. RAP-12345" />
               </div>
               <div>
-                <Label>Comisión plataforma</Label>
+                <Label>{t("digital.platform_commission", "Platform Commission")}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -548,14 +551,14 @@ export default function DigitalOrders() {
                 />
               </div>
               <div>
-                <Label>Notas</Label>
+                <Label>{t("digital.notes", "Notes")}</Label>
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Agregar productos</Label>
+              <Label>{t("digital.add_products", "Add Products")}</Label>
               <Input
-                placeholder="Buscar producto..."
+                placeholder={t("digital.search_product", "Search product...")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -582,7 +585,7 @@ export default function DigitalOrders() {
               )}
               <div className="glass rounded-2xl p-3">
                 {lines.length === 0 ? (
-                  <div className="h-meta py-3 text-center">Sin items todavía</div>
+                  <div className="h-meta py-3 text-center">{t("digital.no_items_yet", "No items added yet")}</div>
                 ) : (
                   <div className="space-y-2 max-h-44 overflow-auto">
                     {lines.map((l) => (
@@ -615,15 +618,15 @@ export default function DigitalOrders() {
                 )}
                 <div className="mt-3 pt-3 border-t border-[var(--hairline)] space-y-1 text-sm">
                   <div className="flex justify-between text-ink-500">
-                    <span>Total bruto</span>
+                    <span>{t("digital.gross_total", "Gross Total")}</span>
                     <span className="tabular-nums">{formatCurrency(grossTotal)}</span>
                   </div>
                   <div className="flex justify-between text-red-500">
-                    <span>Comisión</span>
+                    <span>{t("digital.commission", "Commission")}</span>
                     <span className="tabular-nums">−{formatCurrency(commissionNum)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--hairline)]">
-                    <span className="text-ink-900">Neto estimado</span>
+                    <span className="text-ink-900">{t("digital.estimated_net", "Estimated Net")}</span>
                     <span className="tabular-nums text-brand-600">{formatCurrency(netTotal)}</span>
                   </div>
                 </div>
@@ -631,8 +634,8 @@ export default function DigitalOrders() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={submit} disabled={submitting || lines.length === 0}>Registrar pedido</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t("common.cancel", "Cancel")}</Button>
+            <Button onClick={submit} disabled={submitting || lines.length === 0}>{t("digital.register_order", "Register Order")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

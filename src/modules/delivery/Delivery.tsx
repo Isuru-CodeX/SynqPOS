@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,14 +21,14 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DeliveryStatus = Database["public"]["Enums"]["delivery_status"];
 
-const STATUSES: { id: DeliveryStatus; label: string; pillClass: string }[] = [
-  { id: "received",  label: "Recibido",  pillClass: "s-pill s-pill-mute" },
-  { id: "preparing", label: "Preparando",pillClass: "s-pill s-pill-warn" },
-  { id: "ready",     label: "Listo",     pillClass: "s-pill s-pill-blue" },
-  { id: "assigned",  label: "Asignado",  pillClass: "s-pill s-pill-blue" },
-  { id: "on_way",    label: "En camino", pillClass: "s-pill s-pill-green" },
-  { id: "delivered", label: "Entregado", pillClass: "s-pill s-pill-green" },
-  { id: "cancelled", label: "Cancelado", pillClass: "s-pill s-pill-danger" },
+const getStatuses = (t: (k: string, d?: string) => string): { id: DeliveryStatus; label: string; pillClass: string }[] => [
+  { id: "received",  label: t("delivery.received", "Received"),  pillClass: "s-pill s-pill-mute" },
+  { id: "preparing", label: t("delivery.preparing", "Preparing"),pillClass: "s-pill s-pill-warn" },
+  { id: "ready",     label: t("delivery.ready", "Ready"),     pillClass: "s-pill s-pill-blue" },
+  { id: "assigned",  label: t("delivery.assigned", "Assigned"),  pillClass: "s-pill s-pill-blue" },
+  { id: "on_way",    label: t("delivery.on_way", "On the way"), pillClass: "s-pill s-pill-green" },
+  { id: "delivered", label: t("delivery.delivered", "Delivered"), pillClass: "s-pill s-pill-green" },
+  { id: "cancelled", label: t("delivery.cancelled", "Cancelled"), pillClass: "s-pill s-pill-danger" },
 ];
 
 const NEXT_STATUS: Record<DeliveryStatus, DeliveryStatus | null> = {
@@ -50,7 +51,9 @@ type LineDraft = {
 
 export default function Delivery() {
   const { tenantId, branchId, branches } = useTenantContext();
+  const { t } = useI18n();
   const qc = useQueryClient();
+  const STATUSES = useMemo(() => getStatuses(t), [t]);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -182,8 +185,8 @@ export default function Delivery() {
 
   const submit = async () => {
     if (!tenantId || !branchId) return;
-    if (!form.address.trim()) return toast.error("Dirección requerida");
-    if (lines.length === 0) return toast.error("Agrega productos");
+    if (!form.address.trim()) return toast.error(t("delivery.address_required", "Delivery address is required"));
+    if (lines.length === 0) return toast.error(t("delivery.products_required", "Add at least one product"));
     setSubmitting(true);
     try {
       const items = lines.map((l) => ({
@@ -234,23 +237,23 @@ export default function Delivery() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        eyebrow="OPERACIÓN · DOMICILIOS"
-        title="Domicilios propios"
-        description={`Tablero de pedidos a domicilio · ${branchName}`}
+        eyebrow={t("delivery.eyebrow", "OPERATIONS · DELIVERY")}
+        title={t("delivery.title", "In-House Delivery")}
+        description={`${t("delivery.desc", "Delivery orders dispatch board")} · ${branchName}`}
         actions={
           <button type="button" className="g-btn g-btn-primary" onClick={() => { resetForm(); setOpen(true); }}>
-            <Plus size={15} className="mr-1" /> Nuevo domicilio
+            <Plus size={15} className="mr-1" /> {t("delivery.new_order", "New Delivery")}
           </button>
         }
       />
 
       {isLoading ? (
-        <div className="h-meta py-6">Cargando…</div>
+        <div className="h-meta py-6">{t("common.loading", "Loading…")}</div>
       ) : (orders?.length ?? 0) === 0 ? (
         <EmptyState
           icon={Bike}
-          title="Sin domicilios"
-          description="Registra tu primer pedido a domicilio para empezar el tablero"
+          title={t("delivery.empty_title", "No delivery orders")}
+          description={t("delivery.empty_desc", "Register your first delivery order to start the dispatch board")}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -265,7 +268,7 @@ export default function Delivery() {
               <div className="flex flex-col gap-2 min-h-[80px]">
                 {grouped[col.id].length === 0 && (
                   <div className="glass-thin rounded-xl px-3 py-6 text-center h-meta border border-dashed border-[var(--hairline)]">
-                    Vacío
+                    {t("common.empty", "Empty")}
                   </div>
                 )}
 
@@ -275,7 +278,7 @@ export default function Delivery() {
                     <div key={o.id} className="glass rounded-2xl p-3 flex flex-col gap-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="font-semibold text-sm text-ink-900 leading-tight">
-                          {o.customer_name || "Sin nombre"}
+                          {o.customer_name || t("delivery.no_name", "No name")}
                         </div>
                         <span className={col.pillClass}>{col.label}</span>
                       </div>
@@ -296,7 +299,7 @@ export default function Delivery() {
                       </div>
 
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-[var(--hairline)]">
-                        <span className="h-meta">Envío</span>
+                        <span className="h-meta">{t("delivery.fee", "Delivery Fee")}</span>
                         <span className="tabular-nums text-ink-900 font-semibold">{formatCurrency(Number(o.delivery_fee))}</span>
                       </div>
 
@@ -306,7 +309,7 @@ export default function Delivery() {
                           onValueChange={(v) => updateStatus(o.id, "assigned", v)}
                         >
                           <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Asignar domiciliario" />
+                            <SelectValue placeholder={t("delivery.assign_courier", "Assign Courier")} />
                           </SelectTrigger>
                           <SelectContent>
                             {(couriers ?? []).map((c) => (
@@ -332,7 +335,7 @@ export default function Delivery() {
                             className="g-btn g-btn-ghost g-btn-sm text-red-500"
                             onClick={() => updateStatus(o.id, "cancelled")}
                           >
-                            Cancelar
+                            {t("action.cancel", "Cancel")}
                           </button>
                         )}
                       </div>
@@ -348,28 +351,28 @@ export default function Delivery() {
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Nuevo domicilio</DialogTitle>
+            <DialogTitle>{t("delivery.new_order", "New Delivery")}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div>
-                <Label>Cliente</Label>
+                <Label>{t("delivery.customer_name", "Customer Name")}</Label>
                 <Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
               </div>
               <div>
-                <Label>Teléfono</Label>
+                <Label>{t("delivery.phone", "Phone")}</Label>
                 <Input value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
               </div>
               <div>
-                <Label>Dirección</Label>
+                <Label>{t("delivery.address", "Delivery Address")}</Label>
                 <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </div>
               <div>
-                <Label>Barrio / zona</Label>
+                <Label>{t("delivery.neighborhood", "Neighborhood / Area")}</Label>
                 <Input value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} />
               </div>
               <div>
-                <Label>Costo de envío</Label>
+                <Label>{t("delivery.fee", "Delivery Fee")}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -379,13 +382,13 @@ export default function Delivery() {
                 />
               </div>
               <div>
-                <Label>Notas</Label>
+                <Label>{t("delivery.notes", "Notes / Special Instructions")}</Label>
                 <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Agregar productos</Label>
-              <Input placeholder="Buscar producto..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              <Label>{t("delivery.search_products", "Add Products")}</Label>
+              <Input placeholder={t("products.search", "Search products...")} value={search} onChange={(e) => setSearch(e.target.value)} />
               {search && (
                 <ScrollArea className="h-44 border rounded-lg">
                   <div className="divide-y">
@@ -409,7 +412,7 @@ export default function Delivery() {
               )}
               <div className="glass rounded-2xl p-3">
                 {lines.length === 0 ? (
-                  <div className="h-meta py-3 text-center">Sin items todavía</div>
+                  <div className="h-meta py-3 text-center">{t("tables.no_items_desc", "No items added yet")}</div>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-auto">
                     {lines.map((l) => (
@@ -441,15 +444,15 @@ export default function Delivery() {
                   </div>
                 )}
                 <div className="mt-3 pt-3 border-t border-[var(--hairline)] flex justify-between font-bold">
-                  <span className="h-label">Total</span>
+                  <span className="h-label">{t("common.total", "Total")}</span>
                   <span className="tabular-nums text-brand-600 h-num g-val-16">{formatCurrency(total)}</span>
                 </div>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={submit} disabled={submitting || lines.length === 0}>Registrar domicilio</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t("action.cancel", "Cancel")}</Button>
+            <Button onClick={submit} disabled={submitting || lines.length === 0}>{t("delivery.register", "Register Delivery")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

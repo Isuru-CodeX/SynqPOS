@@ -11,6 +11,7 @@ import { FileText, Loader2, Camera, Upload, Trash2, CheckCircle2, SkipForward } 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applyInventoryMovement } from "@/lib/inventory";
+import { useI18n } from "@/lib/i18n";
 
 interface OCRProduct {
   name: string;
@@ -29,6 +30,7 @@ interface InvoiceMeta {
 }
 
 export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultCenterId, onClose }: any) {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -98,13 +100,13 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
       setMeta({ supplier: data.supplier, invoice_number: data.invoice_number, invoice_date: data.invoice_date });
 
       const autoMapped = mapped.filter(p => p.mapped_product_id).length;
-      toast.success(`${mapped.length} producto(s) extraídos`, {
+      toast.success(`${mapped.length} ${t("ocr.products_extracted", "products extracted")}`, {
         description: autoMapped > 0
-          ? `${autoMapped} vinculados automáticamente`
-          : "Vincula los productos manualmente",
+          ? `${autoMapped} ${t("ocr.auto_mapped", "automatically linked")}`
+          : t("ocr.manual_link", "Link items manually"),
       });
     } catch (err: any) {
-      toast.error(`Error al procesar: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     } finally {
       setProcessing(false);
     }
@@ -125,11 +127,11 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
   };
 
   const saveInventory = async () => {
-    if (!centerId) return toast.error("Selecciona un centro de inventario");
+    if (!centerId) return toast.error(t("inventory.select_center", "Select an inventory center"));
     const toSave = products.filter(p => !p.skipped);
     const unmapped = toSave.filter(p => !p.mapped_product_id);
-    if (unmapped.length > 0) return toast.error(`Vincula o salta ${unmapped.length} producto(s) sin mapear`);
-    if (toSave.length === 0) return toast.error("No hay productos para guardar");
+    if (unmapped.length > 0) return toast.error(t("ocr.unmapped_error", `Link or skip ${unmapped.length} unmapped product(s)`));
+    if (toSave.length === 0) return toast.error(t("ocr.no_products_error", "No products to save"));
 
     setSaving(true);
     try {
@@ -140,13 +142,13 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
           inventoryCenterId: centerId,
           type: "purchase",
           quantity: p.quantity,
-          reason: ["Factura IA", meta.supplier && `Proveedor: ${meta.supplier}`, meta.invoice_number && `#${meta.invoice_number}`]
+          reason: ["AI Invoice", meta.supplier && `Supplier: ${meta.supplier}`, meta.invoice_number && `#${meta.invoice_number}`]
             .filter(Boolean).join(" · "),
           referenceType: "ai_ocr",
         });
       }
-      toast.success("Inventario actualizado", {
-        description: `${toSave.length} movimiento(s) registrado(s)${products.length - toSave.length > 0 ? `, ${products.length - toSave.length} saltado(s)` : ""}`,
+      toast.success(t("ocr.inventory_updated", "Inventory updated successfully"), {
+        description: `${toSave.length} recorded${products.length - toSave.length > 0 ? `, ${products.length - toSave.length} skipped` : ""}`,
       });
       onClose();
     } catch (err: any) {
@@ -165,7 +167,7 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          Cargar Factura con IA (Gemini)
+          {t("ocr.dialog_title", "Import Invoice with AI (Gemini)")}
         </DialogTitle>
       </DialogHeader>
 
@@ -187,44 +189,44 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
                   <Upload className="h-8 w-8" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium">Sube una foto de tu factura de proveedor</p>
+                  <p className="text-sm font-medium">{t("ocr.upload_prompt", "Upload an image of your vendor invoice")}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Gemini extrae productos, cantidades y precios automáticamente
+                    {t("ocr.upload_desc", "Gemini automatically extracts products, quantities, and prices")}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-                    <Upload className="h-4 w-4 mr-2" /> Seleccionar archivo
+                    <Upload className="h-4 w-4 mr-2" /> {t("ocr.select_file", "Select File")}
                   </Button>
                   <Button onClick={() => fileInputRef.current?.click()} className="md:hidden">
-                    <Camera className="h-4 w-4 mr-2" /> Tomar foto
+                    <Camera className="h-4 w-4 mr-2" /> {t("ocr.take_photo", "Take Photo")}
                   </Button>
                 </div>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange}
-                  accept="image/*" className="hidden" title="Subir factura" />
+                  accept="image/*" className="hidden" title={t("ocr.select_file", "Select File")} />
               </div>
             )}
           </div>
           <Button className="w-full h-12 text-base" disabled={!preview || processing} onClick={processInvoice}>
             {processing
-              ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Analizando con Gemini...</>
-              : "Analizar factura"}
+              ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> {t("ocr.analyzing", "Analyzing with Gemini...")}</>
+              : t("ocr.analyze_btn", "Analyze Invoice")}
           </Button>
         </div>
       ) : (
         <div className="space-y-4 py-2">
           {(meta.supplier || meta.invoice_number || meta.invoice_date) && (
             <Card className="p-3 flex flex-wrap gap-4 text-sm bg-muted/30">
-              {meta.supplier && <span><span className="text-muted-foreground">Proveedor:</span> <strong>{meta.supplier}</strong></span>}
-              {meta.invoice_number && <span><span className="text-muted-foreground">Factura #:</span> <strong>{meta.invoice_number}</strong></span>}
-              {meta.invoice_date && <span><span className="text-muted-foreground">Fecha:</span> <strong>{meta.invoice_date}</strong></span>}
+              {meta.supplier && <span><span className="text-muted-foreground">{t("suppliers.supplier", "Supplier")}:</span> <strong>{meta.supplier}</strong></span>}
+              {meta.invoice_number && <span><span className="text-muted-foreground">{t("ocr.invoice_num", "Invoice #")}:</span> <strong>{meta.invoice_number}</strong></span>}
+              {meta.invoice_date && <span><span className="text-muted-foreground">{t("common.date", "Date")}:</span> <strong>{meta.invoice_date}</strong></span>}
             </Card>
           )}
 
           <div className="max-w-xs">
-            <Label className="text-xs mb-1.5 block">Centro de inventario</Label>
+            <Label className="text-xs mb-1.5 block">{t("inventory.center", "Inventory Center")}</Label>
             <Select value={centerId} onValueChange={setCenterId}>
-              <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("common.search", "Select...")} /></SelectTrigger>
               <SelectContent>
                 {centers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
@@ -235,9 +237,74 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
-                  <TableHead>Producto (factura)</TableHead>
-                  <TableHead>Producto en sistema</TableHead>
-                  <TableHead className="text-right">Cant.</TableHead>
+                  <TableHead>{t("ocr.col_invoice_product", "Product (Invoice)")}</TableHead>
+                  <TableHead>{t("ocr.col_system_product", "System Product")}</TableHead>
+                  <TableHead className="text-right">{t("common.qty", "Qty")}</TableHead>
+                  <TableHead className="text-right">{t("common.cost", "Unit Cost")}</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((p, idx) => (
+                  <TableRow key={idx} className={p.skipped ? "opacity-40" : ""}>
+                    <TableCell className="font-medium">
+                      <div className="max-w-[160px] truncate" title={p.name}>{p.name}</div>
+                      {p.unit && <div className="text-xs text-muted-foreground">{p.unit}</div>}
+                    </TableCell>
+                    <TableCell>
+                      {p.skipped ? (
+                        <span className="text-xs text-muted-foreground italic">{t("ocr.skipped", "Skipped")}</span>
+                      ) : (
+                        <Select value={p.mapped_product_id ?? ""} onValueChange={v => updateMapping(idx, v)}>
+                          <SelectTrigger className={p.mapped_product_id ? "border-success/60" : "border-destructive/40"}>
+                            <SelectValue placeholder={t("ocr.link", "Link...")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(catalog as any[]).map((ep: any) => (
+                              <SelectItem key={ep.id} value={ep.id}>
+                                {ep.name}{ep.sku ? ` (${ep.sku})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(p.quantity).toFixed(2)}</TableCell>
+                    <TableCell className="text-right tabular-nums">${Number(p.unit_price).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground"
+                        title={p.skipped ? "Include" : "Skip"} onClick={() => toggleSkip(idx)}>
+                        <SkipForward className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg flex-wrap gap-3">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="flex items-center gap-1 text-success">
+                <CheckCircle2 className="h-4 w-4" /> {mappedCount} {t("ocr.mapped_count", "linked")}
+              </span>
+              {skippedCount > 0 && <Badge variant="secondary">{skippedCount} {t("ocr.skipped_count", "skipped")}</Badge>}
+              {pendingCount > 0 && <Badge variant="destructive">{pendingCount} {t("ocr.pending_count", "unlinked")}</Badge>}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setProducts([])}>{t("common.back", "Back")}</Button>
+              <Button onClick={saveInventory} disabled={saving || pendingCount > 0 || !centerId || mappedCount === 0}>
+                {saving
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("suppliers.btn_saving", "Saving...")}</>
+                  : `${t("ocr.save_btn", "Import to Inventory")} (${mappedCount})`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DialogContent>
+  );
+}
                   <TableHead className="text-right">Costo unit.</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -271,7 +338,7 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
                     <TableCell className="text-right tabular-nums">${Number(p.unit_price).toLocaleString("es-CO")}</TableCell>
                     <TableCell>
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground"
-                        title={p.skipped ? "Incluir" : "Saltar"} onClick={() => toggleSkip(idx)}>
+                        title={p.skipped ? t("inventory.include", "Include") : t("inventory.skip", "Skip")} onClick={() => toggleSkip(idx)}>
                         <SkipForward className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
@@ -284,17 +351,17 @@ export function InvoiceOCRDialog({ tenantId, branchId, userId, centers, defaultC
           <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg flex-wrap gap-3">
             <div className="flex items-center gap-3 text-sm">
               <span className="flex items-center gap-1 text-success">
-                <CheckCircle2 className="h-4 w-4" /> {mappedCount} vinculados
+                <CheckCircle2 className="h-4 w-4" /> {mappedCount} {t("inventory.linked", "linked")}
               </span>
-              {skippedCount > 0 && <Badge variant="secondary">{skippedCount} saltados</Badge>}
-              {pendingCount > 0 && <Badge variant="destructive">{pendingCount} sin vincular</Badge>}
+              {skippedCount > 0 && <Badge variant="secondary">{skippedCount} {t("inventory.skipped", "skipped")}</Badge>}
+              {pendingCount > 0 && <Badge variant="destructive">{pendingCount} {t("inventory.unlinked", "unlinked")}</Badge>}
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setProducts([])}>Volver</Button>
+              <Button variant="ghost" onClick={() => setProducts([])}>{t("action.back", "Back")}</Button>
               <Button onClick={saveInventory} disabled={saving || pendingCount > 0 || !centerId || mappedCount === 0}>
                 {saving
-                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...</>
-                  : `Cargar ${mappedCount} al inventario`}
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("common.saving", "Saving...")}</>
+                  : t("inventory.load_count_to_stock", `Load ${mappedCount} into Inventory`)}
               </Button>
             </div>
           </div>

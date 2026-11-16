@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Download, RefreshCw } from "lucide-react";
 import { applyPWAUpdate } from "@/pwa";
+import { useI18n } from "@/lib/i18n";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -9,7 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISS_KEY = "pwa-install-dismissed-at";
-const DISMISS_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 días
+const DISMISS_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 function isStandalone() {
   if (typeof window === "undefined") return false;
@@ -26,6 +27,7 @@ function isElectron() {
 
 export function PWAInstallPrompt() {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (isElectron() || isStandalone()) return;
@@ -37,26 +39,28 @@ export function PWAInstallPrompt() {
       const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
       if (dismissedAt && Date.now() - dismissedAt < DISMISS_TTL_MS) return;
 
-      toast("Instala POS Pro", {
-        description:
-          "Instálalo en este dispositivo para abrirlo como una app y trabajar sin conexión.",
+      toast(t("pwa.install_title", "Install SynqPOS"), {
+        description: t(
+          "pwa.install_desc",
+          "Install on this device to launch as a standalone desktop/tablet app and work offline.",
+        ),
         duration: Infinity,
         icon: <Download className="h-4 w-4" />,
         action: {
-          label: "Instalar",
+          label: t("pwa.install_btn", "Install"),
           onClick: async () => {
             const promptEvent = deferredPromptRef.current;
             if (!promptEvent) return;
             await promptEvent.prompt();
             const choice = await promptEvent.userChoice;
             if (choice.outcome === "accepted") {
-              toast.success("¡App instalada!");
+              toast.success(t("pwa.installed_success", "SynqPOS installed successfully!"));
             }
             deferredPromptRef.current = null;
           },
         },
         cancel: {
-          label: "Ahora no",
+          label: t("pwa.not_now", "Not now"),
           onClick: () => {
             localStorage.setItem(DISMISS_KEY, String(Date.now()));
           },
@@ -67,16 +71,16 @@ export function PWAInstallPrompt() {
     const onInstalled = () => {
       deferredPromptRef.current = null;
       localStorage.removeItem(DISMISS_KEY);
-      toast.success("POS Pro instalado correctamente");
+      toast.success(t("pwa.installed_success", "SynqPOS installed successfully!"));
     };
 
     const onUpdateAvailable = () => {
-      toast("Nueva versión disponible", {
-        description: "Actualiza para obtener las últimas mejoras.",
+      toast(t("pwa.update_title", "New version available"), {
+        description: t("pwa.update_desc", "Update now to receive the latest improvements."),
         duration: Infinity,
         icon: <RefreshCw className="h-4 w-4" />,
         action: {
-          label: "Actualizar",
+          label: t("pwa.update_btn", "Update"),
           onClick: () => {
             void applyPWAUpdate();
           },
@@ -85,7 +89,7 @@ export function PWAInstallPrompt() {
     };
 
     const onOfflineReady = () => {
-      toast.success("Listo para funcionar sin conexión");
+      toast.success(t("pwa.offline_ready", "Ready for offline operation"));
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);

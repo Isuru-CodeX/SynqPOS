@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -25,21 +26,22 @@ function startOfWeek(d = new Date()) {
 
 type ShiftTab = "week" | "list" | "attendance";
 
-const STATUS_MAP: Record<string, { label: string; pill: string }> = {
-  scheduled:   { label: "Programado", pill: "g-pill g-pill-ghost" },
-  in_progress: { label: "En curso",   pill: "g-pill g-pill-brand" },
-  completed:   { label: "Completado", pill: "g-pill g-pill-ok" },
-  missed:      { label: "No asistió", pill: "g-pill g-pill-bad" },
-};
-
 export default function Shifts() {
   const { tenantId, branchId, branches } = useTenantContext();
   const { user } = useAuth();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<ShiftTab>("week");
   const [scopeBranch, setScopeBranch] = useState<string>("__all__");
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek());
+
+  const statusMap: Record<string, { label: string; pill: string }> = {
+    scheduled:   { label: t("shifts.status_scheduled", "Scheduled"), pill: "g-pill g-pill-ghost" },
+    in_progress: { label: t("shifts.status_in_progress", "In Progress"), pill: "g-pill g-pill-brand" },
+    completed:   { label: t("shifts.status_completed", "Completed"), pill: "g-pill g-pill-ok" },
+    missed:      { label: t("shifts.status_missed", "Missed"), pill: "g-pill g-pill-bad" },
+  };
 
   const weekEnd = useMemo(() => {
     const d = new Date(weekStart);
@@ -87,7 +89,7 @@ export default function Shifts() {
   });
 
   if (!tenantId || !user) {
-    return <div className="h-meta py-16 text-center">Cargando turnos…</div>;
+    return <div className="h-meta py-16 text-center">{t("common.loading", "Loading shifts…")}</div>;
   }
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -110,7 +112,7 @@ export default function Shifts() {
     const { error: e2 } = await supabase.from("employee_shifts")
       .update({ check_in: new Date().toISOString(), status: "in_progress" }).eq("id", shift.id);
     if (e2) return toast.error(e2.message);
-    toast.success("Entrada registrada");
+    toast.success(t("shifts.check_in_registered", "Check-in recorded"));
     qc.invalidateQueries({ queryKey: ["shifts"] });
     qc.invalidateQueries({ queryKey: ["attendance"] });
   };
@@ -123,7 +125,7 @@ export default function Shifts() {
     const { error: e2 } = await supabase.from("employee_shifts")
       .update({ check_out: new Date().toISOString(), status: "completed" }).eq("id", shift.id);
     if (e2) return toast.error(e2.message);
-    toast.success("Salida registrada");
+    toast.success(t("shifts.check_out_registered", "Check-out recorded"));
     qc.invalidateQueries({ queryKey: ["shifts"] });
     qc.invalidateQueries({ queryKey: ["attendance"] });
   };
@@ -152,10 +154,10 @@ export default function Shifts() {
             <Calendar className="h-5 w-5" />
           </div>
           <div>
-            <div className="h-meta g-page-subtitle text-ink-400">NEGOCIO · TURNOS</div>
-            <h1 className="h-display g-page-title">Programación de turnos</h1>
+            <div className="h-meta g-page-subtitle text-ink-400">{t("shifts.eyebrow", "BUSINESS · SHIFTS")}</div>
+            <h1 className="h-display g-page-title">{t("shifts.title", "Staff Shifts & Schedule")}</h1>
             <div className="h-meta g-page-subtitle text-ink-500">
-              {shiftList.length} turno{shiftList.length !== 1 ? "s" : ""} esta semana
+              {shiftList.length} {t("shifts.shifts_this_week", "shift(s) this week")}
             </div>
           </div>
         </div>
@@ -163,7 +165,7 @@ export default function Shifts() {
           <Select value={scopeBranch} onValueChange={setScopeBranch}>
             <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todas las sucursales</SelectItem>
+              <SelectItem value="__all__">{t("shifts.all_branches", "All Branches")}</SelectItem>
               {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -171,7 +173,7 @@ export default function Shifts() {
             <DialogTrigger asChild>
               <button type="button" className="g-btn g-btn-primary">
                 <Plus className="h-4 w-4" />
-                Nuevo turno
+                {t("shifts.new_shift", "Schedule Shift")}
               </button>
             </DialogTrigger>
             <ShiftForm
@@ -187,14 +189,14 @@ export default function Shifts() {
 
       {/* Tab switcher */}
       <div className="flex gap-1 p-1 glass-thin rounded-xl w-fit">
-        {(["week", "list", "attendance"] as ShiftTab[]).map((t) => (
+        {(["week", "list", "attendance"] as ShiftTab[]).map((tabKey) => (
           <button
-            key={t}
+            key={tabKey}
             type="button"
-            className={`g-btn ${tab === t ? "g-btn-primary" : "g-btn-ghost"} g-btn-sm`}
-            onClick={() => setTab(t)}
+            className={`g-btn ${tab === tabKey ? "g-btn-primary" : "g-btn-ghost"} g-btn-sm`}
+            onClick={() => setTab(tabKey)}
           >
-            {t === "week" ? "Semana" : t === "list" ? "Lista" : "Asistencia"}
+            {tabKey === "week" ? t("shifts.tab_week", "Week") : tabKey === "list" ? t("shifts.tab_list", "List") : t("shifts.tab_attendance", "Attendance")}
           </button>
         ))}
       </div>
@@ -204,13 +206,13 @@ export default function Shifts() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => navWeek(-1)}>← Anterior</button>
-              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => setWeekStart(startOfWeek())}>Hoy</button>
-              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => navWeek(1)}>Siguiente →</button>
+              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => navWeek(-1)}>{t("shifts.prev", "← Prev")}</button>
+              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => setWeekStart(startOfWeek())}>{t("shifts.today", "Today")}</button>
+              <button type="button" className="g-btn g-btn-ghost g-btn-sm" onClick={() => navWeek(1)}>{t("shifts.next", "Next →")}</button>
             </div>
             <div className="h-meta text-sm text-ink-500">
-              {weekStart.toLocaleDateString("es-CO", { day: "numeric", month: "short" })} —{" "}
-              {new Date(weekEnd.getTime() - 1).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })}
+              {weekStart.toLocaleDateString(undefined, { day: "numeric", month: "short" })} —{" "}
+              {new Date(weekEnd.getTime() - 1).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
             </div>
           </div>
 
@@ -224,13 +226,13 @@ export default function Shifts() {
                   className={`glass${isToday ? "-strong" : ""} rounded-xl p-2 min-h-[180px]`}
                 >
                   <div className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-2">
-                    {d.toLocaleDateString("es-CO", { weekday: "short" })}
+                    {d.toLocaleDateString(undefined, { weekday: "short" })}
                     <span className={`ml-1 ${isToday ? "text-brand-600" : "text-ink-900"}`}>{d.getDate()}</span>
                   </div>
                   <div className="space-y-1.5">
                     {list.length === 0 && <div className="text-xs text-ink-400 italic">—</div>}
                     {list.map((s: any) => {
-                      const st = STATUS_MAP[s.status] ?? STATUS_MAP.scheduled;
+                      const st = statusMap[s.status] ?? statusMap.scheduled;
                       return (
                         <div key={s.id} className="glass-thin rounded-lg p-2 text-xs space-y-1">
                           <div className="font-medium truncate text-ink-900">{s.employees?.full_name ?? "—"}</div>
@@ -254,32 +256,32 @@ export default function Shifts() {
             <div className="orb mx-auto mb-4">
               <Calendar className="h-7 w-7" />
             </div>
-            <h2 className="h-display font-semibold text-lg">Sin turnos</h2>
-            <p className="h-meta g-page-subtitle text-ink-500 mt-1">Crea el primer turno de la semana.</p>
+            <h2 className="h-display font-semibold text-lg">{t("shifts.empty_title", "No shifts scheduled")}</h2>
+            <p className="h-meta g-page-subtitle text-ink-500 mt-1">{t("shifts.empty_desc", "Create the first shift for this week.")}</p>
           </div>
         ) : (
           <div className="glass rounded-2xl overflow-hidden">
             <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_100px_120px] gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-400 border-b border-white/10">
-              <span>Empleado</span>
-              <span>Inicio</span>
-              <span>Fin</span>
-              <span>Entrada</span>
-              <span>Salida</span>
-              <span>Estado</span>
-              <span className="text-right">Acciones</span>
+              <span>{t("shifts.col_employee", "Employee")}</span>
+              <span>{t("shifts.col_start", "Start")}</span>
+              <span>{t("shifts.col_end", "End")}</span>
+              <span>{t("shifts.col_checkin", "Check In")}</span>
+              <span>{t("shifts.col_checkout", "Check Out")}</span>
+              <span>{t("shifts.col_status", "Status")}</span>
+              <span className="text-right">{t("common.actions", "Actions")}</span>
             </div>
             {shiftList.map((s: any, idx: number) => {
-              const st = STATUS_MAP[s.status] ?? STATUS_MAP.scheduled;
+              const st = statusMap[s.status] ?? statusMap.scheduled;
               return (
                 <div
                   key={s.id}
                   className={`grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_100px_120px] gap-3 px-4 py-3 items-center hover:bg-white/5 transition-colors${idx < shiftList.length - 1 ? " border-b border-white/10" : ""}`}
                 >
                   <span className="font-medium text-sm text-ink-900">{s.employees?.full_name ?? "—"}</span>
-                  <span className="text-sm tabular-nums text-ink-700">{new Date(s.scheduled_start).toLocaleString("es-CO")}</span>
-                  <span className="text-sm tabular-nums text-ink-700">{new Date(s.scheduled_end).toLocaleString("es-CO")}</span>
-                  <span className="text-sm tabular-nums text-ink-500">{s.check_in ? new Date(s.check_in).toLocaleTimeString("es-CO") : "—"}</span>
-                  <span className="text-sm tabular-nums text-ink-500">{s.check_out ? new Date(s.check_out).toLocaleTimeString("es-CO") : "—"}</span>
+                  <span className="text-sm tabular-nums text-ink-700">{new Date(s.scheduled_start).toLocaleString()}</span>
+                  <span className="text-sm tabular-nums text-ink-700">{new Date(s.scheduled_end).toLocaleString()}</span>
+                  <span className="text-sm tabular-nums text-ink-500">{s.check_in ? new Date(s.check_in).toLocaleTimeString() : "—"}</span>
+                  <span className="text-sm tabular-nums text-ink-500">{s.check_out ? new Date(s.check_out).toLocaleTimeString() : "—"}</span>
                   <span className={st.pill}>{st.label}</span>
                   <div className="flex gap-1 justify-end">
                     {!s.check_in && (
@@ -289,7 +291,7 @@ export default function Shifts() {
                         onClick={() => checkIn(s)}
                       >
                         <LogIn className="h-3 w-3" />
-                        Entrada
+                        {t("shifts.col_checkin", "Check In")}
                       </button>
                     )}
                     {s.check_in && !s.check_out && (
@@ -299,7 +301,7 @@ export default function Shifts() {
                         onClick={() => checkOut(s)}
                       >
                         <LogOut className="h-3 w-3" />
-                        Salida
+                        {t("shifts.col_checkout", "Check Out")}
                       </button>
                     )}
                   </div>
@@ -317,27 +319,27 @@ export default function Shifts() {
             <div className="orb mx-auto mb-4">
               <Clock className="h-7 w-7" />
             </div>
-            <h2 className="h-display font-semibold text-lg">Sin registros</h2>
-            <p className="h-meta g-page-subtitle text-ink-500 mt-1">No hay registros de asistencia todavía.</p>
+            <h2 className="h-display font-semibold text-lg">{t("shifts.empty_attendance", "No attendance records yet")}</h2>
+            <p className="h-meta g-page-subtitle text-ink-500 mt-1">{t("shifts.empty_attendance_desc", "Employee check-ins and check-outs will be logged here.")}</p>
           </div>
         ) : (
           <div className="glass rounded-2xl overflow-hidden">
             <div className="grid grid-cols-[2fr_2fr_120px] gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-400 border-b border-white/10">
-              <span>Fecha</span>
-              <span>Empleado</span>
-              <span>Tipo</span>
+              <span>{t("common.date", "Date")}</span>
+              <span>{t("shifts.col_employee", "Employee")}</span>
+              <span>{t("shifts.col_type", "Type")}</span>
             </div>
             {attendanceList.map((a: any, idx: number) => (
               <div
                 key={a.id}
                 className={`grid grid-cols-[2fr_2fr_120px] gap-3 px-4 py-3 items-center hover:bg-white/5 transition-colors${idx < attendanceList.length - 1 ? " border-b border-white/10" : ""}`}
               >
-                <span className="text-sm tabular-nums text-ink-500">{new Date(a.created_at).toLocaleString("es-CO")}</span>
+                <span className="text-sm tabular-nums text-ink-500">{new Date(a.created_at).toLocaleString()}</span>
                 <span className="font-medium text-sm text-ink-900">{a.employees?.full_name ?? "—"}</span>
                 <span>
                   {a.type === "check_in"
-                    ? <span className="g-pill g-pill-ok flex items-center gap-1 w-fit"><Clock className="h-3 w-3" />Entrada</span>
-                    : <span className="g-pill g-pill-ghost flex items-center gap-1 w-fit"><Clock className="h-3 w-3" />Salida</span>
+                    ? <span className="g-pill g-pill-ok flex items-center gap-1 w-fit"><Clock className="h-3 w-3" />{t("shifts.col_checkin", "Check In")}</span>
+                    : <span className="g-pill g-pill-ghost flex items-center gap-1 w-fit"><Clock className="h-3 w-3" />{t("shifts.col_checkout", "Check Out")}</span>
                   }
                 </span>
               </div>
@@ -358,6 +360,7 @@ function ShiftForm({
   employees: any[];
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const now = new Date();
   const later = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const [form, setForm] = useState({
@@ -370,9 +373,9 @@ function ShiftForm({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.employee_id || !form.branch_id) return toast.error("Empleado y sucursal son obligatorios");
+    if (!form.employee_id || !form.branch_id) return toast.error(t("shifts.err_required", "Employee and branch are required"));
     if (new Date(form.scheduled_end) <= new Date(form.scheduled_start)) {
-      return toast.error("El fin debe ser posterior al inicio");
+      return toast.error(t("shifts.err_time_order", "End time must be after start time"));
     }
     setSaving(true);
     const { error } = await supabase.from("employee_shifts").insert({
@@ -385,28 +388,28 @@ function ShiftForm({
     });
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Turno creado");
+    toast.success(t("shifts.created", "Shift created successfully"));
     onClose();
   };
 
   return (
     <DialogContent className="max-w-md">
-      <DialogHeader><DialogTitle>Nuevo turno</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>{t("shifts.dialog_title", "Schedule Shift")}</DialogTitle></DialogHeader>
       <form onSubmit={submit} className="space-y-3">
         <div className="space-y-1.5">
-          <Label>Empleado</Label>
+          <Label>{t("shifts.lbl_employee", "Employee *")}</Label>
           <Select value={form.employee_id} onValueChange={(v) => setForm({ ...form, employee_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("common.search", "Select...")} /></SelectTrigger>
             <SelectContent>
-              {employees.length === 0 && <div className="p-2 text-xs text-ink-500">Sin empleados activos</div>}
+              {employees.length === 0 && <div className="p-2 text-xs text-ink-500">{t("employees.empty_title", "No active employees")}</div>}
               {employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Sucursal</Label>
+          <Label>{t("topbar.branch", "Branch *")}</Label>
           <Select value={form.branch_id} onValueChange={(v) => setForm({ ...form, branch_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("common.search", "Select...")} /></SelectTrigger>
             <SelectContent>
               {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
             </SelectContent>
@@ -414,18 +417,18 @@ function ShiftForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label>Inicio</Label>
+            <Label>{t("shifts.lbl_start", "Start Time *")}</Label>
             <Input type="datetime-local" required value={form.scheduled_start}
               onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
           </div>
           <div className="space-y-1.5">
-            <Label>Fin</Label>
+            <Label>{t("shifts.lbl_end", "End Time *")}</Label>
             <Input type="datetime-local" required value={form.scheduled_end}
               onChange={(e) => setForm({ ...form, scheduled_end: e.target.value })} />
           </div>
         </div>
         <button type="submit" className="g-btn g-btn-primary w-full g-btn-touch" disabled={saving}>
-          {saving ? "Guardando..." : "Crear turno"}
+          {saving ? t("suppliers.btn_saving", "Saving...") : t("shifts.btn_save", "Create Shift")}
         </button>
       </form>
     </DialogContent>

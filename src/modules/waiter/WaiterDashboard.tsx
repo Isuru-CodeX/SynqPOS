@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/format";
 import {
   Plus, Bike, ScanLine, Receipt, Users, UtensilsCrossed,
@@ -19,6 +20,7 @@ import { LiveDot } from "@/components/shared/LiveDot";
 function TableDrawer({ table, order, items, onClose, onNavigate }: {
   table: any; order: any; items: any[]; onClose: () => void; onNavigate: () => void;
 }) {
+  const { t } = useI18n();
   const totalAmt = Number(order?.total ?? 0);
   const orderState = order ? deriveOrderState(order.status, items) : null;
   const meta = orderState ? ORDER_STATE_META[orderState] : null;
@@ -38,10 +40,10 @@ function TableDrawer({ table, order, items, onClose, onNavigate }: {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <div className="eyebrow eyebrow-blue">MESA</div>
+            <div className="eyebrow eyebrow-blue">{t("tables.table", "TABLE")}</div>
             <div className="font-bold text-2xl">{table.name}</div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              {table.capacity} pax · {order?.status === "open" ? "Orden abierta" : "Enviado a caja"}
+              {table.capacity} {t("waiter.pax", "pax")} · {order?.status === "open" ? t("waiter.open_order", "Open Order") : t("waiter.sent_to_cashier", "Sent to Cashier")}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -52,7 +54,7 @@ function TableDrawer({ table, order, items, onClose, onNavigate }: {
             )}
             <button
               type="button"
-              aria-label="Cerrar detalle de mesa"
+              aria-label={t("action.close", "Close")}
               onClick={onClose}
               className="h-8 w-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -76,7 +78,7 @@ function TableDrawer({ table, order, items, onClose, onNavigate }: {
               </div>
             ))}
             <div className="flex justify-between items-center pt-2">
-              <span className="eyebrow">TOTAL</span>
+              <span className="eyebrow">{t("common.total", "TOTAL")}</span>
               <span className="big-number waiter-big-total">{formatCurrency(totalAmt)}</span>
             </div>
           </div>
@@ -89,10 +91,10 @@ function TableDrawer({ table, order, items, onClose, onNavigate }: {
               const c = countByStatus(items);
               return (
                 <>
-                  {c.pending > 0   && <span className="s-pill s-pill-mute">{c.pending} pendiente{c.pending !== 1 ? "s" : ""}</span>}
-                  {c.preparing > 0 && <span className="s-pill s-pill-warn">{c.preparing} preparando</span>}
-                  {c.ready > 0     && <span className="s-pill s-pill-blue">{c.ready} listo{c.ready !== 1 ? "s" : ""}</span>}
-                  {c.dispatched > 0 && <span className="s-pill s-pill-green">{c.dispatched} servido{c.dispatched !== 1 ? "s" : ""}</span>}
+                  {c.pending > 0   && <span className="s-pill s-pill-mute">{c.pending} {t("tables.short_pending", "pending")}</span>}
+                  {c.preparing > 0 && <span className="s-pill s-pill-warn">{c.preparing} {t("tables.short_prep", "preparing")}</span>}
+                  {c.ready > 0     && <span className="s-pill s-pill-blue">{c.ready} {t("tables.short_ready", "ready")}</span>}
+                  {c.dispatched > 0 && <span className="s-pill s-pill-green">{c.dispatched} {t("tables.short_served", "served")}</span>}
                 </>
               );
             })()}
@@ -106,14 +108,14 @@ function TableDrawer({ table, order, items, onClose, onNavigate }: {
             className="btn btn-ghost flex items-center justify-center gap-2 h-12 rounded-xl"
             onClick={onNavigate}
           >
-            <Send className="h-4 w-4" /> Ver comanda
+            <Send className="h-4 w-4" /> {t("waiter.view_order", "View Order")}
           </button>
           <button
             type="button"
             className="btn btn-primary flex items-center justify-center gap-2 h-12 rounded-xl"
             onClick={onNavigate}
           >
-            <Receipt className="h-4 w-4" /> Cobrar
+            <Receipt className="h-4 w-4" /> {t("action.charge", "Charge")}
           </button>
         </div>
       </div>
@@ -125,6 +127,7 @@ function TableDrawer({ table, order, items, onClose, onNavigate }: {
 function TableCard({ table, order, items, isMine, onOpen }: {
   table: any; order: any; items: any[]; isMine: boolean; onOpen: () => void;
 }) {
+  const { t } = useI18n();
   const occupied = !!order;
   const state = occupied ? deriveOrderState(order.status, items) : null;
   const meta = state ? ORDER_STATE_META[state] : null;
@@ -144,7 +147,7 @@ function TableCard({ table, order, items, isMine, onOpen }: {
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Mesa ${table.name}${occupied ? " – ocupada" : " – libre"}`}
+      aria-label={`${t("tables.table", "Table")} ${table.name}${occupied ? " – " + t("tables.status_occupied", "occupied") : " – " + t("tables.status_free", "available")}`}
       className={cn(
         "relative rounded-2xl border-2 p-3.5 text-left transition-all active:scale-95 flex flex-col gap-1.5 min-h-[120px] w-full",
         cardClass,
@@ -152,7 +155,7 @@ function TableCard({ table, order, items, isMine, onOpen }: {
     >
       {/* Top row */}
       <div className="flex items-start justify-between gap-1">
-        <div className="waiter-eyebrow-xs">MESA</div>
+        <div className="waiter-eyebrow-xs">{t("tables.table", "TABLE")}</div>
         {occupied && state === "ready"     && <span className="live-dot live-dot-blue" />}
         {occupied && state === "preparing" && <span className="live-dot live-dot-amber" />}
         {!occupied && isMine              && <span className="live-dot" />}
@@ -164,12 +167,12 @@ function TableCard({ table, order, items, isMine, onOpen }: {
       {/* Status */}
       {!occupied ? (
         <div className="mt-auto text-[10px] text-muted-foreground uppercase tracking-wider">
-          {isMine ? "Asignada · Libre" : "Disponible"}
+          {isMine ? t("waiter.assigned_free", "Assigned · Free") : t("tables.status_free", "Available")}
         </div>
       ) : (
         <div className="mt-auto space-y-1">
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Users className="h-2.5 w-2.5" /> {table.capacity} pax
+            <Users className="h-2.5 w-2.5" /> {table.capacity} {t("waiter.pax", "pax")}
           </div>
           {meta && (
             <div className={cn("text-[10px] font-semibold", meta.tone)}>{meta.label}</div>
@@ -185,18 +188,11 @@ function TableCard({ table, order, items, isMine, onOpen }: {
   );
 }
 
-/* ─── Quick action config ─────────────────────────────────────── */
-const QUICK_ACTIONS = [
-  { icon: Plus,     label: "Nueva",     scClass: "sc-blue",   to: "/tables"   },
-  { icon: Bike,     label: "Domicilio", scClass: "sc-green",  to: "/delivery" },
-  { icon: ScanLine, label: "Escanear",  scClass: "sc-purple", to: "/pos"      },
-  { icon: Receipt,  label: "Cobrar",    scClass: "sc-amber",  to: "/cash"     },
-] as const;
-
 /* ─── Main dashboard ──────────────────────────────────────────── */
 export default function WaiterDashboard() {
   const { tenantId, branchId, branches } = useTenantContext();
   const { user } = useAuth();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -204,6 +200,13 @@ export default function WaiterDashboard() {
   const [drawerTable, setDrawerTable] = useState<any | null>(null);
 
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "—";
+
+  const quickActions = [
+    { icon: Plus,     label: t("waiter.new_order", "New Order"), scClass: "sc-blue",   to: "/tables"   },
+    { icon: Bike,     label: t("waiter.delivery", "Delivery"),   scClass: "sc-green",  to: "/delivery" },
+    { icon: ScanLine, label: t("waiter.scan", "Scan"),           scClass: "sc-purple", to: "/pos"      },
+    { icon: Receipt,  label: t("action.charge", "Charge"),       scClass: "sc-amber",  to: "/cash"     },
+  ];
 
   const { data: tables } = useQuery({
     queryKey: ["waiter-tables", tenantId, branchId],
@@ -304,16 +307,16 @@ export default function WaiterDashboard() {
             <GearMark size={96} />
           </div>
 
-          <div className="eyebrow eyebrow-blue mb-1">TURNO ACTIVO · {branchName}</div>
+          <div className="eyebrow eyebrow-blue mb-1">{t("waiter.active_shift", "ACTIVE SHIFT")} · {branchName}</div>
           <div className="waiter-hero-font font-bold text-lg">
-            Hola, <span className="gradient-text">{user.email?.split("@")[0] ?? "Mesero"}</span>
+            {t("waiter.greeting", "Hello")}, <span className="gradient-text">{user.email?.split("@")[0] ?? t("waiter.role_waiter", "Waiter")}</span>
           </div>
 
           <div className="grid grid-cols-3 gap-3 mt-3">
             {[
-              { label: "MIS MESAS", value: String(myTables.length),    color: "text-foreground" },
-              { label: "OCUPADAS",  value: String(occupiedCount),       color: "text-primary"    },
-              { label: "ATENCIÓN",  value: String(attentionCount),      color: "text-amber-500"  },
+              { label: t("waiter.my_tables", "MY TABLES"), value: String(myTables.length),    color: "text-foreground" },
+              { label: t("waiter.occupied", "OCCUPIED"),  value: String(occupiedCount),       color: "text-primary"    },
+              { label: t("waiter.attention", "ATTENTION"),  value: String(attentionCount),      color: "text-amber-500"  },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="waiter-eyebrow-xs">{stat.label}</div>
@@ -324,7 +327,7 @@ export default function WaiterDashboard() {
 
           {totalMyRevenue > 0 && (
             <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
-              <span className="waiter-eyebrow-xs">TOTAL EN MIS MESAS</span>
+              <span className="waiter-eyebrow-xs">{t("waiter.total_my_tables", "TOTAL AT MY TABLES")}</span>
               <span className="big-number waiter-big-order">{formatCurrency(totalMyRevenue)}</span>
             </div>
           )}
@@ -333,9 +336,9 @@ export default function WaiterDashboard() {
 
       {/* ── Quick actions ────────────────────────────────── */}
       <div className="px-4 py-3 grid grid-cols-4 gap-2">
-        {QUICK_ACTIONS.map(({ icon: Icon, label, scClass, to }) => (
+        {quickActions.map(({ icon: Icon, label, scClass, to }) => (
           <Link
-            key={label}
+            key={to}
             to={to}
             className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-all active:scale-95"
           >
@@ -350,8 +353,8 @@ export default function WaiterDashboard() {
       {/* ── Tab selector ─────────────────────────────────── */}
       <div className="px-4 pb-2 flex gap-2">
         {[
-          { id: "mesas",    label: "Mesas",    count: (tables ?? []).length },
-          { id: "comandas", label: "Comandas", count: myOrders.length },
+          { id: "mesas",    label: t("waiter.tables", "Tables"), count: (tables ?? []).length },
+          { id: "comandas", label: t("waiter.orders", "Orders"), count: myOrders.length },
         ].map(({ id, label, count }) => (
           <button
             key={id}
@@ -385,14 +388,14 @@ export default function WaiterDashboard() {
           <>
             <div className="flex items-center justify-between mb-3">
               <div className="waiter-eyebrow-sm">
-                {(tables ?? []).length} MESAS · SALÓN
+                {(tables ?? []).length} {t("tables.title", "TABLES")} · {t("tables.tables_count", "FLOOR")}
               </div>
               <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1"><LiveDot />{occupiedCount} ocupadas</span>
+                <span className="flex items-center gap-1"><LiveDot />{occupiedCount} {t("tables.status_occupied", "occupied")}</span>
                 {attentionCount > 0 && (
                   <span className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3 text-amber-500" />
-                    {attentionCount} atención
+                    {attentionCount} {t("waiter.attention", "attention")}
                   </span>
                 )}
               </div>
@@ -401,7 +404,7 @@ export default function WaiterDashboard() {
             {(tables ?? []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                 <UtensilsCrossed className="h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">No hay mesas configuradas</p>
+                <p className="text-sm text-muted-foreground">{t("tables.no_tables", "No tables configured in this branch.")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
@@ -431,7 +434,7 @@ export default function WaiterDashboard() {
             {myOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                 <CheckCircle2 className="h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">Sin comandas activas</p>
+                <p className="text-sm text-muted-foreground">{t("waiter.no_orders", "No active orders")}</p>
               </div>
             ) : myOrders.map((o: any) => {
               const items = itemsByOrder[o.id] ?? [];
@@ -442,7 +445,7 @@ export default function WaiterDashboard() {
                 <button
                   key={o.id}
                   type="button"
-                  aria-label={`Abrir comanda de ${o.tables?.name ?? "Mesa"}`}
+                  aria-label={`${t("waiter.view_order", "Open order")} ${o.tables?.name ?? t("tables.table", "Table")}`}
                   onClick={() => navigate(`/tables/${o.id}`)}
                   className="w-full rounded-2xl border border-border bg-card p-4 text-left flex items-center gap-3 hover:border-primary/30 active:scale-[0.99] transition-all"
                 >
@@ -450,12 +453,12 @@ export default function WaiterDashboard() {
                     <UtensilsCrossed className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-base">{o.tables?.name ?? "Mesa"}</div>
+                    <div className="font-bold text-base">{o.tables?.name ?? t("tables.table", "Table")}</div>
                     <div className="text-xs text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
-                      {c.pending   > 0 && <span>{c.pending} pend.</span>}
-                      {c.preparing > 0 && <span className="text-amber-500">{c.preparing} prep.</span>}
-                      {c.ready     > 0 && <span className="text-sky-500">{c.ready} listo{c.ready !== 1 ? "s" : ""}</span>}
-                      {items.length === 0 && <span>Sin ítems</span>}
+                      {c.pending   > 0 && <span>{c.pending} {t("tables.short_pending", "pend.")}</span>}
+                      {c.preparing > 0 && <span className="text-amber-500">{c.preparing} {t("tables.short_prep", "prep.")}</span>}
+                      {c.ready     > 0 && <span className="text-sky-500">{c.ready} {t("tables.short_ready", "ready")}</span>}
+                      {items.length === 0 && <span>{t("tables.no_items", "No items")}</span>}
                     </div>
                     {meta && <div className={cn("text-[10px] font-semibold mt-1", meta.tone)}>{meta.label}</div>}
                   </div>
