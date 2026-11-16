@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { NetworkStatusBadge } from "./NetworkStatusBadge";
 import { TweaksPanel } from "@/components/shared/TweaksPanel";
+import { NotificationCenter } from "./NotificationCenter";
 
 function Shell() {
   const navigate = useNavigate();
@@ -105,10 +106,7 @@ function Shell() {
             </div>
 
             {/* Notifications */}
-            <div className="glass g-topbar-bell">
-              <Bell size={18} />
-              <span className="g-topbar-bell-dot">!</span>
-            </div>
+            <NotificationCenter />
 
             {/* Theme Toggle */}
             <button
