@@ -10,7 +10,8 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { TenantProvider } from "@/components/layout/TenantProvider";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { ThemeApplier } from "@/components/shared/ThemeApplier";
-import { Loader2 } from "lucide-react";
+import { PageTransitionLoader } from "@/components/shared/PageTransitionLoader";
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useSyncEngine } from "@/hooks/useSyncEngine";
@@ -54,9 +55,13 @@ const Expenses = lazy(() => import("./modules/expenses/Expenses"));
 const AIAgent  = lazy(() => import("./modules/ai-agent/AIAgent"));
 
 const PageFallback = () => (
-  <div className="min-h-screen grid place-items-center">
-    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-  </div>
+  <LoadingScreen
+    show
+    message="Loading Workspace…"
+    subMessage="AI Omnichannel POS & ERP"
+    minDuration={1000}
+    fullScreen
+  />
 );
 
 const App = () => {
@@ -92,6 +97,7 @@ const App = () => {
           <Sonner richColors closeButton />
           <PWAInstallPrompt />
           <BrowserRouter>
+            <PageTransitionLoader />
             <OfflineBanner />
             <Suspense fallback={<PageFallback />}>
               <Routes>

@@ -153,14 +153,16 @@ export function AppSidebar() {
                           to={item.url}
                           title={collapsed ? title : undefined}
                           className={cn(
-                            "g-sb-nav-item",
+                            "g-sb-nav-item group",
                             active && "is-active",
                             collapsed && "g-sb-nav-item-collapsed"
                           )}
                         >
-                          <item.icon size={18} style={{ flexShrink: 0 }} />
+                          <div className="g-icon-badge">
+                            <item.icon size={16} />
+                          </div>
                           {!collapsed && (
-                            <span className="truncate flex-1">{title}</span>
+                            <span className="truncate flex-1 font-medium">{title}</span>
                           )}
                           {item.url === "/whatsapp" && unreadCount > 0 && (
                             <span className={cn("g-sb-badge", collapsed && "g-sb-badge-float")}>

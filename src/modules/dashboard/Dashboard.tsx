@@ -93,13 +93,38 @@ function BarRow({ label, sub, pct, value }: { label: string; sub: string; pct: n
 }
 
 /* ── KPI card ── */
-interface KPIProps { label: string; value: string; delta?: string; deltaUp?: boolean; sub?: string; icon: React.ReactNode; compact?: boolean }
-function KPICard({ label, value, delta, deltaUp = true, sub, icon, compact = false }: KPIProps) {
+interface KPIProps {
+  label: string;
+  value: string;
+  delta?: string;
+  deltaUp?: boolean;
+  sub?: string;
+  icon: React.ReactNode;
+  compact?: boolean;
+  colorScheme?: "cyan" | "purple" | "pink" | "emerald" | "amber" | "indigo";
+}
+
+const KPI_ORB_THEMES: Record<string, string> = {
+  cyan: "bg-gradient-to-br from-[#06B6D4] to-[#38BDF8] text-white shadow-[0_0_18px_rgba(6,182,212,0.55)] border border-cyan-300/40",
+  purple: "bg-gradient-to-br from-[#8B5CF6] to-[#A855F7] text-white shadow-[0_0_18px_rgba(139,92,246,0.55)] border border-purple-300/40",
+  pink: "bg-gradient-to-br from-[#EC4899] to-[#F43F5E] text-white shadow-[0_0_18px_rgba(236,72,153,0.55)] border border-pink-300/40",
+  emerald: "bg-gradient-to-br from-[#10B981] to-[#059669] text-white shadow-[0_0_18px_rgba(16,185,129,0.55)] border border-emerald-300/40",
+  amber: "bg-gradient-to-br from-[#F59E0B] to-[#D97706] text-white shadow-[0_0_18px_rgba(245,158,11,0.55)] border border-amber-300/40",
+  indigo: "bg-gradient-to-br from-[#6366F1] to-[#4F46E5] text-white shadow-[0_0_18px_rgba(99,102,241,0.55)] border border-indigo-300/40",
+};
+
+function KPICard({ label, value, delta, deltaUp = true, sub, icon, compact = false, colorScheme = "purple" }: KPIProps) {
   return (
-    <div className={cn("glass flex flex-col", compact ? "g-kpi g-kpi-compact" : "g-kpi")}>
+    <div className={cn("glass flex flex-col group transition-all duration-300 hover:translate-y-[-2px] hover:border-purple-500/30", compact ? "g-kpi g-kpi-compact" : "g-kpi")}>
       <div className="flex items-center justify-between gap-2.5">
         <div className={cn("h-label font-semibold", compact ? "g-val-11" : "g-val-12")}>{label}</div>
-        <div className={cn("orb", compact ? "g-orb-30" : "g-orb-38")}>{icon}</div>
+        <div className={cn(
+          "orb transition-all duration-300 group-hover:scale-115 group-hover:rotate-6",
+          compact ? "g-orb-30" : "g-orb-38",
+          KPI_ORB_THEMES[colorScheme]
+        )}>
+          {icon}
+        </div>
       </div>
       <div className={cn("h-num font-bold", compact ? "g-val-22" : "g-val-28")}>{value}</div>
       {(delta || sub) && (
@@ -190,10 +215,10 @@ export default function Dashboard() {
 
   const totalSales = metrics?.totalSales ?? 0;
   const CHANNEL_SEGS: DonutSeg[] = [
-    { value: 52, color: "#38BDF8", label: t("dashboard.channel_pos", "Physical Store"), amount: formatCurrency(totalSales * 0.52) },
-    { value: 24, color: "#818CF8", label: t("dashboard.channel_web", "Web Store"),      amount: formatCurrency(totalSales * 0.24) },
-    { value: 16, color: "#C084FC", label: t("dashboard.channel_mobile", "Mobile App"), amount: formatCurrency(totalSales * 0.16) },
-    { value:  8, color: "#34D399", label: t("dashboard.channel_delivery", "Delivery"), amount: formatCurrency(totalSales * 0.08) },
+    { value: 52, color: "#06B6D4", label: t("dashboard.channel_pos", "Physical Store"), amount: formatCurrency(totalSales * 0.52) },
+    { value: 24, color: "#8B5CF6", label: t("dashboard.channel_web", "Web Store"),      amount: formatCurrency(totalSales * 0.24) },
+    { value: 16, color: "#EC4899", label: t("dashboard.channel_mobile", "Mobile App"), amount: formatCurrency(totalSales * 0.16) },
+    { value:  8, color: "#10B981", label: t("dashboard.channel_delivery", "Delivery"), amount: formatCurrency(totalSales * 0.08) },
   ];
 
   const TOP_PRODUCTS = [
@@ -207,13 +232,14 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* KPI row */}
+      {/* KPI row with Cyan, Purple, Pink, Emerald, Amber Orbs */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
         <KPICard
           label={t("dashboard.sales_today", "Today's Sales")}
           value={formatCurrency(metrics?.totalSales ?? 0)}
           delta="18.5%"
           sub={t("dashboard.vs_yesterday", "vs. yesterday")}
+          colorScheme="cyan"
           icon={<TrendingUp size={16} />}
         />
         <KPICard
@@ -221,30 +247,35 @@ export default function Dashboard() {
           value={String(metrics?.salesCount ?? 0)}
           delta="12%"
           sub={t("dashboard.vs_yesterday", "vs. yesterday")}
+          colorScheme="purple"
           icon={<ShoppingCart size={16} />}
         />
         <KPICard
           label={t("dashboard.cash_drawer", "Current Drawer")}
           value={formatCurrency(metrics?.expectedCash ?? 0)}
           sub={metrics?.cashOpen ? t("dashboard.drawer_open", "Drawer Open") : t("dashboard.no_session", "No Session")}
+          colorScheme="emerald"
           icon={<Wallet size={16} />}
         />
         <KPICard
           label={t("dashboard.healthy_stock", "Stock Health")}
           value={`${metrics?.stockHealth ?? 100}%`}
           sub={t("nav.inventory", "Inventory")}
+          colorScheme="pink"
           icon={<Package size={16} />}
         />
         <KPICard
           label={t("dashboard.production", "Production")}
           value={String(metrics?.productionToday ?? 0)}
           sub={t("dashboard.units_today", "Units today")}
+          colorScheme="amber"
           icon={<Factory size={16} />}
         />
         <KPICard
           label={t("dashboard.active_channels", "Active Channels")}
           value="4 / 5"
           sub={t("dashboard.online_pct", "80% online")}
+          colorScheme="indigo"
           icon={<Globe size={16} />}
         />
       </div>
