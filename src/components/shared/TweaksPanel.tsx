@@ -1,5 +1,5 @@
-import { X, Moon, Sun, Sparkles, Globe, Coins } from 'lucide-react'
-import { useThemeStore } from '@/stores/theme'
+import { X, Moon, Sun, Sparkles, Globe, Coins, Eclipse, Flame } from 'lucide-react'
+import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { usePreferencesStore, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES, type LanguageCode } from '@/stores/preferences'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -13,8 +13,15 @@ export function TweaksPanel({ onClose }: TweaksPanelProps) {
   const { language, setLanguage, currency, setCurrency } = usePreferencesStore()
   const { t } = useI18n()
 
+  const THEMES: { id: ThemeMode; label: string; icon: any }[] = [
+    { id: 'dark',      label: 'Obsidian', icon: Moon },
+    { id: 'midnight',  label: 'Midnight', icon: Flame },
+    { id: 'mixed',     label: 'Mixed',    icon: Eclipse },
+    { id: 'light',     label: 'Studio',   icon: Sun },
+  ]
+
   return (
-    <div className="w-84 rounded-2xl border border-border bg-card shadow-2xl p-5 text-foreground space-y-4">
+    <div className="w-88 rounded-2xl border border-border bg-card shadow-2xl p-5 text-foreground space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -33,36 +40,32 @@ export function TweaksPanel({ onClose }: TweaksPanelProps) {
         </button>
       </div>
 
-      {/* Theme Mode */}
+      {/* Theme Modes */}
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
           {t("tweaks.mode", "Theme Mode")}
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('dark')}
-            className={cn(
-              "flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold transition-all",
-              mode === 'dark'
-                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25"
-                : "bg-muted/50 border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Moon size={14} /> {t("tweaks.dark", "Dark (Gemini)")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('light')}
-            className={cn(
-              "flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold transition-all",
-              mode === 'light'
-                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25"
-                : "bg-muted/50 border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Sun size={14} /> {t("tweaks.light", "Light")}
-          </button>
+          {THEMES.map((th) => {
+            const Icon = th.icon
+            const isSelected = mode === th.id
+            return (
+              <button
+                key={th.id}
+                type="button"
+                onClick={() => setMode(th.id)}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold transition-all",
+                  isSelected
+                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25"
+                    : "bg-muted/40 border-border text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                )}
+              >
+                <Icon size={13} />
+                <span>{th.label}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -71,78 +74,54 @@ export function TweaksPanel({ onClose }: TweaksPanelProps) {
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
           {t("tweaks.accent", "Accent Color")}
         </label>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setAccent('gemini')}
-            className={cn(
-              "flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[11px] font-semibold transition-all",
-              accent === 'gemini'
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <span className="w-4 h-4 rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-fuchsia-500 shadow-sm" />
-            Gemini
-          </button>
-          <button
-            type="button"
-            onClick={() => setAccent('indigo')}
-            className={cn(
-              "flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[11px] font-semibold transition-all",
-              accent === 'indigo'
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <span className="w-4 h-4 rounded-full bg-indigo-500 shadow-sm" />
-            Indigo
-          </button>
-          <button
-            type="button"
-            onClick={() => setAccent('teal')}
-            className={cn(
-              "flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[11px] font-semibold transition-all",
-              accent === 'teal'
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <span className="w-4 h-4 rounded-full bg-teal-500 shadow-sm" />
-            Teal
-          </button>
-        </div>
-      </div>
-
-      {/* Language Switcher */}
-      <div>
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-          <Globe size={13} className="text-primary" />
-          {t("tweaks.language", "Language")}
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {SUPPORTED_LANGUAGES.map((lang) => (
+        <div className="grid grid-cols-4 gap-1.5">
+          {[
+            { id: 'gemini', label: 'Gemini', dot: 'bg-gradient-to-r from-sky-400 via-indigo-500 to-fuchsia-500' },
+            { id: 'indigo', label: 'Indigo', dot: 'bg-indigo-500' },
+            { id: 'teal',   label: 'Teal',   dot: 'bg-teal-500' },
+            { id: 'rose',   label: 'Rose',   dot: 'bg-pink-500' },
+          ].map((a) => (
             <button
-              key={lang.code}
+              key={a.id}
               type="button"
-              onClick={() => setLanguage(lang.code as LanguageCode)}
+              onClick={() => setAccent(a.id as any)}
               className={cn(
-                "flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl border text-xs font-semibold transition-all",
-                language === lang.code
-                  ? "bg-primary/15 text-primary border-primary"
-                  : "bg-muted/40 border-border text-muted-foreground hover:text-foreground"
+                "flex flex-col items-center gap-1 p-1.5 rounded-xl border text-[11px] font-semibold transition-all",
+                accent === a.id
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
               )}
             >
-              <span>{lang.flag}</span>
-              <span>{lang.name}</span>
+              <span className={cn("w-3.5 h-3.5 rounded-full shadow-sm", a.dot)} />
+              <span className="truncate w-full text-center">{a.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Currency Switcher */}
+      {/* Language Selector */}
       <div>
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+          <Globe size={13} className="text-primary" />
+          {t("tweaks.language", "Language")}
+        </label>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+          aria-label={t("tweaks.language", "Language")}
+          className="w-full border border-input rounded-xl px-3 py-2 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          {SUPPORTED_LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.flag} {l.name} — {l.native}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Currency Selector */}
+      <div>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
           <Coins size={13} className="text-primary" />
           {t("tweaks.currency", "Currency")}
         </label>
@@ -150,11 +129,11 @@ export function TweaksPanel({ onClose }: TweaksPanelProps) {
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
           aria-label={t("tweaks.currency", "Currency")}
-          className="w-full border border-input rounded-xl px-3 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full border border-input rounded-xl px-3 py-2 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
         >
           {SUPPORTED_CURRENCIES.map((c) => (
             <option key={c.code} value={c.code}>
-              {c.symbol} — {c.code} ({c.name})
+              {c.symbol} · {c.code} ({c.name})
             </option>
           ))}
         </select>
@@ -162,7 +141,7 @@ export function TweaksPanel({ onClose }: TweaksPanelProps) {
 
       <div className="pt-2 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
         <span>SynqPOS AI Omnichannel</span>
-        <span className="font-mono text-primary font-semibold">USD · Dark</span>
+        <span className="font-mono text-primary font-semibold">{currency} · {mode.toUpperCase()}</span>
       </div>
     </div>
   )

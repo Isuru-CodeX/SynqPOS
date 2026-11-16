@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { Banknote, CreditCard, Smartphone, QrCode, Loader2, Heart, Tag } from "lucide-react";
 import { NumPad } from "./NumPad";
 import { cn } from "@/lib/utils";
@@ -20,10 +21,10 @@ interface PaymentDialogProps {
 }
 
 const METHODS = [
-  { id: "cash" as const, label: "Efectivo", icon: Banknote },
-  { id: "card" as const, label: "Tarjeta", icon: CreditCard },
-  { id: "transfer" as const, label: "Transfer.", icon: Smartphone },
-  { id: "qr" as const, label: "QR", icon: QrCode },
+  { id: "cash" as const, key: "pos.cash", defaultLabel: "Cash", icon: Banknote },
+  { id: "card" as const, key: "pos.card", defaultLabel: "Card", icon: CreditCard },
+  { id: "transfer" as const, key: "pos.transfer", defaultLabel: "Transfer", icon: Smartphone },
+  { id: "qr" as const, key: "pos.qr", defaultLabel: "QR", icon: QrCode },
 ];
 
 const TIP_SUGGESTIONS = [
@@ -36,6 +37,7 @@ const TIP_SUGGESTIONS = [
 const SHORTCUTS = [5000, 10000, 20000, 50000];
 
 export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting, onConfirm }: PaymentDialogProps) {
+  const { t } = useI18n();
   const [method, setMethod] = useState<PayMethod>("cash");
   const [tendered, setTendered] = useState<string>("");
   const [tip, setTip] = useState<number>(0);
@@ -111,9 +113,9 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
       <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-[var(--g-hairline)]">
           <DialogTitle className="text-xl flex items-baseline justify-between">
-            <span className="h-display text-xl">Cobrar venta</span>
+            <span className="h-display text-xl">{t("pos.charge_sale", "Charge Sale")}</span>
             <div className="text-right">
-              <div className="h-meta">Total a pagar (inc. propina)</div>
+              <div className="h-meta">{t("pos.total_payable", "Total payable (inc. tip)")}</div>
               <div className="h-num text-3xl text-brand-600">{formatCurrency(grandTotal)}</div>
             </div>
           </DialogTitle>
@@ -125,7 +127,7 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
 
             {/* Payment Method */}
             <div className="space-y-3">
-              <div className="h-label uppercase tracking-widest">Método de pago</div>
+              <div className="h-label uppercase tracking-widest">{t("pos.payment_method", "Payment Method")}</div>
               <div className="grid grid-cols-2 gap-2">
                 {METHODS.map((m) => {
                   const active = method === m.id;
@@ -145,7 +147,7 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
                       )}
                     >
                       <m.icon className="h-6 w-6" />
-                      <span className="font-semibold text-sm">{m.label}</span>
+                      <span className="font-semibold text-sm">{t(m.key, m.defaultLabel)}</span>
                     </button>
                   );
                 })}
@@ -156,10 +158,10 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="h-label uppercase tracking-widest flex items-center gap-1.5">
-                  <Heart className="h-3.5 w-3.5 text-[var(--g-bad)]" /> Propina
+                  <Heart className="h-3.5 w-3.5 text-[var(--g-bad)]" /> {t("pos.tip", "Tip")}
                 </div>
                 <div className="text-sm font-bold tabular-nums text-g-bad">
-                  {tip > 0 ? "+" + formatCurrency(tip) : "Sin propina"}
+                  {tip > 0 ? "+" + formatCurrency(tip) : t("pos.no_tip", "No tip")}
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-2">
@@ -184,7 +186,7 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 h-meta">$</span>
                 <Input
                   type="number"
-                  placeholder="Monto personalizado"
+                  placeholder={t("pos.custom_amount", "Custom amount")}
                   className="pl-7"
                   value={tip || ""}
                   onChange={(e) => setTip(Number(e.target.value) || 0)}
@@ -195,11 +197,11 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
             {/* Coupon Code */}
             <div className="space-y-3 pt-2">
               <div className="h-label uppercase tracking-widest flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5" /> Cupón de descuento
+                <Tag className="h-3.5 w-3.5" /> {t("pos.discount_coupon", "Discount coupon")}
               </div>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ingresa código..."
+                  placeholder={t("pos.enter_code", "Enter code...")}
                   value={coupon}
                   onChange={(e) => {
                     setCoupon(e.target.value.toUpperCase());
@@ -213,12 +215,12 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
                   onClick={applyCoupon}
                   disabled={validatingCoupon}
                 >
-                  {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                  {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : t("pos.apply", "Apply")}
                 </button>
               </div>
               {couponDiscount > 0 && (
                 <div className="text-xs font-semibold text-[var(--g-ok)]">
-                  Descuento aplicado: -{formatCurrency(couponDiscount)}
+                  {t("pos.discount_applied", "Discount applied")}: -{formatCurrency(couponDiscount)}
                 </div>
               )}
             </div>
@@ -229,7 +231,7 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
             <div className="space-y-4">
               <div className="glass rounded-xl px-4 py-3">
                 <div className="h-label uppercase tracking-widest mb-1">
-                  {method === "cash" ? "Efectivo recibido" : "Confirmar monto"}
+                  {method === "cash" ? t("pos.cash_received", "Cash received") : t("pos.confirm_amount", "Confirm amount")}
                 </div>
                 <div className="h-num text-3xl">{formatCurrency(tenderedNum)}</div>
               </div>
@@ -243,9 +245,9 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
 
               {method === "cash" && (
                 <div className="glass rounded-xl px-4 py-3 flex items-center justify-between">
-                  <span className="h-label uppercase tracking-wider">Cambio</span>
+                  <span className="h-label uppercase tracking-wider">{t("pos.change", "Change")}</span>
                   <span className={cn("h-num text-xl", insufficient ? "text-[var(--g-bad)]" : "text-[var(--g-ok)]")}>
-                    {insufficient ? "Faltan " + formatCurrency(grandTotal - tenderedNum) : formatCurrency(change)}
+                    {insufficient ? `${t("pos.missing", "Missing")} ${formatCurrency(grandTotal - tenderedNum)}` : formatCurrency(change)}
                   </span>
                 </div>
               )}
@@ -260,7 +262,7 @@ export function PaymentDialog({ open, onOpenChange, total, tenantId, submitting,
               {submitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <>PAGAR {formatCurrency(grandTotal)}</>
+                <>{t("pos.pay", "PAY")} {formatCurrency(grandTotal)}</>
               )}
             </button>
           </div>

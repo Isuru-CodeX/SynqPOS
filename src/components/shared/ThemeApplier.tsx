@@ -31,6 +31,14 @@ const ACCENT_COLORS: Record<string, { light: ColorSet; dark: ColorSet }> = {
     light: { primary: '175 65% 33%', glow: '175 65% 45%', sidebar: '175 65% 52%', gradient: 'linear-gradient(135deg, hsl(175 65% 28%), hsl(175 65% 44%))' },
     dark:  { primary: '175 65% 48%', glow: '175 65% 60%', sidebar: '175 65% 55%', gradient: 'linear-gradient(135deg, hsl(175 65% 42%), hsl(175 65% 57%))' },
   },
+  rose: {
+    light: { primary: '335 78% 48%', glow: '335 78% 60%', sidebar: '335 78% 55%', gradient: 'linear-gradient(135deg, hsl(335 78% 45%), hsl(335 78% 60%))' },
+    dark:  { primary: '335 85% 65%', glow: '335 85% 75%', sidebar: '335 85% 70%', gradient: 'linear-gradient(135deg, hsl(335 85% 58%), hsl(335 85% 72%))' },
+  },
+  amber: {
+    light: { primary: '38 92% 50%', glow: '38 92% 60%', sidebar: '38 92% 50%', gradient: 'linear-gradient(135deg, hsl(38 92% 45%), hsl(38 92% 60%))' },
+    dark:  { primary: '42 95% 55%', glow: '42 95% 65%', sidebar: '42 95% 55%', gradient: 'linear-gradient(135deg, hsl(42 95% 50%), hsl(42 95% 65%))' },
+  },
 }
 
 function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
@@ -60,16 +68,21 @@ export function ThemeApplier() {
 
   useEffect(() => {
     const root = document.documentElement
-    
-    // Apply dark or light mode based on user preference
-    root.classList.toggle('dark', mode === 'dark')
+    const isDark = mode !== 'light' && mode !== 'soft-light'
+
+    // Root classes
+    root.classList.toggle('dark', isDark)
+    root.classList.toggle('theme-dark', mode === 'dark')
+    root.classList.toggle('theme-midnight', mode === 'midnight')
+    root.classList.toggle('theme-mixed', mode === 'mixed')
+    root.classList.toggle('theme-light', mode === 'light')
+    root.classList.toggle('theme-soft-light', mode === 'soft-light')
     root.classList.toggle('spacing-compact', spacing === 'compacto')
 
-    // Remove old class-based accent markers
+    // Clean obsolete classes
     root.classList.remove('accent-indigo', 'accent-teal')
 
     let colors: ColorSet
-    const isDark = mode === 'dark'
 
     if (accent === 'azul' && primaryColor) {
       const hsl = hexToHsl(primaryColor)
@@ -98,8 +111,20 @@ export function ThemeApplier() {
     root.style.setProperty('--sidebar-ring', colors.sidebar)
     root.style.setProperty('--gradient-primary', colors.gradient)
 
-    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach(el => {
-      el.content = isDark ? '#0B0F19' : `hsl(${colors.primary})`
+    // Sync browser tab bar theme-color
+    const themeMetaColor =
+      mode === 'midnight'
+        ? '#000000'
+        : mode === 'dark'
+        ? '#080C14'
+        : mode === 'mixed'
+        ? '#0F172A'
+        : mode === 'soft-light'
+        ? '#FAF8F5'
+        : '#FFFFFF'
+
+    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((el) => {
+      el.content = themeMetaColor
     })
   }, [mode, accent, spacing, primaryColor])
 

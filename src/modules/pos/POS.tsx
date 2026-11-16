@@ -27,8 +27,10 @@ import { BrandBar } from "@/components/shared/BrandBar";
 import { TickRail } from "@/components/shared/TickRail";
 import { LiveDot } from "@/components/shared/LiveDot";
 import { useDevMode } from "@/hooks/useDevMode";
+import { useI18n } from "@/lib/i18n";
 
 export default function POS() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { tenantId, branchId, branches, activeChannels } = useTenantContext();
@@ -353,8 +355,8 @@ export default function POS() {
 
   const finalize = async (method: PayMethod, _tendered: number, tipAmount: number, couponCode?: string, discountAmount = 0) => {
     if (!tenantId || !branchId) return;
-    if (lines.length === 0) return toast.error("Agrega productos al ticket");
-    if (isPos && !openSession) return toast.error("Debes abrir caja antes de vender en presencial");
+    if (lines.length === 0) return toast.error(t("pos.tap_product", "Add products to ticket"));
+    if (isPos && !openSession) return toast.error(t("pos.must_open_drawer", "You must open a cash drawer before in-person sales"));
 
     setSubmitting(true);
     try {
@@ -386,8 +388,8 @@ export default function POS() {
       const queuedOffline = !saleId || typeof saleId !== "string";
       toast.success(
         queuedOffline
-          ? `Venta guardada en cola · ${formatCurrency(payableTotal)}`
-          : `Venta registrada · ${formatCurrency(payableTotal)}`
+          ? `${t("pos.sale_queued", "Sale saved in offline queue")} · ${formatCurrency(payableTotal)}`
+          : `${t("pos.sale_registered", "Sale registered")} · ${formatCurrency(payableTotal)}`
       );
       if (saleId && typeof saleId === "string") {
         try {
@@ -419,10 +421,8 @@ export default function POS() {
           });
           if (method === "cash") await openDrawer();
         } catch (hwErr: any) {
-          // La venta ya quedó registrada en BD; un fallo del hardware no debe
-          // bloquear el cierre del ticket ni provocar que el cajero cobre dos veces.
-          toast.warning("Venta registrada, pero la impresora o gaveta fallaron", {
-            description: hwErr?.message ?? "Revisa el hardware antes del próximo ticket",
+          toast.warning(t("pos.hardware_warning", "Sale registered, but receipt printer or drawer had an issue"), {
+            description: hwErr?.message,
           });
         }
       }
@@ -435,7 +435,7 @@ export default function POS() {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
     } catch (err: any) {
-      toast.error(err.message ?? "No se pudo finalizar la venta");
+      toast.error(err.message ?? t("pos.error_finalize", "Could not complete sale"));
     } finally { setSubmitting(false); }
   };
 
@@ -445,8 +445,8 @@ export default function POS() {
   });
 
   const handleSendToTable = async () => {
-    if (!selectedTableId) return toast.error("Selecciona una mesa primero");
-    if (lines.length === 0) return toast.error("Agrega productos al ticket");
+    if (!selectedTableId) return toast.error(t("pos.select_table_first", "Select a table first"));
+    if (lines.length === 0) return toast.error(t("pos.tap_product", "Add products to ticket"));
 
     setSubmitting(true);
     try {
@@ -481,8 +481,8 @@ export default function POS() {
 
       toast.success(
         result && typeof result === "string"
-          ? "Comanda enviada a la mesa"
-          : "Comanda guardada en cola offline"
+          ? t("pos.order_sent_to_table", "Order sent to table")
+          : t("pos.sale_queued", "Order saved in offline queue")
       );
       clear();
       setSelectedTableId(null);
@@ -520,7 +520,7 @@ export default function POS() {
         <div className="flex-1">
           <BrandBar
             branch={branchName}
-            session={`Caja · ${branchName}`}
+            session={`${t("nav.cash", "Cash Register")} · ${branchName}`}
             channel={CHANNELS.find((c) => c.id === channel)?.label ?? "Local"}
             showSync={!!openSession}
           />
@@ -528,16 +528,16 @@ export default function POS() {
         <Link
           to="/dashboard"
           className="flex items-center gap-1.5 shrink-0 px-4 border-l text-[12px] text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          title="Volver al panel principal"
+          title={t("action.back_to_home", "Back to dashboard")}
         >
           <LayoutDashboard className="h-4 w-4" />
-          <span className="hidden sm:inline font-medium">Panel</span>
+          <span className="hidden sm:inline font-medium">{t("nav.dashboard", "Dashboard")}</span>
         </Link>
       </div>
 
       {/* ── Sub-header: channels + metrics ticker ─────────── */}
       <div className="flex items-center gap-2 px-4 py-2 border-b bg-card/60 flex-wrap shrink-0">
-        <span className="eyebrow eyebrow-muted text-[9px] shrink-0">CANAL</span>
+        <span className="eyebrow eyebrow-muted text-[9px] shrink-0">{t("pos.channel", "CHANNEL")}</span>
 
         {CHANNELS.filter(c => activeChannels.includes(c.id)).map((c) => (
           <button
@@ -580,9 +580,9 @@ export default function POS() {
         {/* Today's metrics ticker */}
         {todayMetrics && (
           <TickRail items={[
-            { key: "VENTAS HOY", value: formatCurrency(todayMetrics.totalSales) },
-            { key: "TICKETS",    value: String(todayMetrics.count) },
-            { key: "PROM",       value: formatCurrency(todayMetrics.avgTicket) },
+            { key: t("pos.sales_today", "SALES TODAY"), value: formatCurrency(todayMetrics.totalSales) },
+            { key: t("pos.tickets", "TICKETS"),    value: String(todayMetrics.count) },
+            { key: t("pos.avg", "AVG"),       value: formatCurrency(todayMetrics.avgTicket) },
           ]} />
         )}
 
@@ -594,18 +594,18 @@ export default function POS() {
             className="s-pill s-pill-blue gap-1"
           >
             <UtensilsCrossed className="h-3 w-3" />
-            {pendingTables} mesa{pendingTables !== 1 ? "s" : ""}
+            {pendingTables} {t("pos.tables_count", "tables")}
           </button>
         )}
 
         {/* Cash session status */}
         {isPos && (openSession ? (
           <span className="s-pill s-pill-green">
-            <LiveDot /> Caja abierta
+            <LiveDot /> {t("pos.cash_open", "Drawer Open")}
           </span>
         ) : (
           <span className="s-pill s-pill-danger">
-            <LockKeyhole className="h-3 w-3" /> Sin caja
+            <LockKeyhole className="h-3 w-3" /> {t("pos.no_cash", "No Drawer")}
           </span>
         ))}
       </div>
@@ -613,8 +613,8 @@ export default function POS() {
       {/* ── No-session warning ───────────────────────────── */}
       {isPos && !openSession && (
         <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center justify-between gap-3 shrink-0">
-          <span className="text-sm"><strong>Caja cerrada</strong> · Abre la caja para registrar ventas presenciales.</span>
-          <Button asChild size="sm" variant="default"><Link to="/cash">Abrir caja</Link></Button>
+          <span className="text-sm"><strong>{t("pos.cash_closed_notice", "Drawer closed · Open the cash drawer to register sales.")}</strong></span>
+          <Button asChild size="sm" variant="default"><Link to="/cash">{t("pos.open_drawer", "Open Drawer")}</Link></Button>
         </div>
       )}
 
@@ -631,7 +631,7 @@ export default function POS() {
               <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 type="search"
-                placeholder="Buscar producto, SKU o código de barras…"
+                placeholder={t("pos.search_placeholder", "Search product, SKU or barcode…")}
                 className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -666,7 +666,7 @@ export default function POS() {
                   <UserRound className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Cliente…"
+                    placeholder={t("pos.customer", "Customer…")}
                     value={customerSearch}
                     onChange={(e) => { setCustomerSearch(e.target.value); setCustomerDropdown(true); }}
                     onFocus={() => setCustomerDropdown(true)}
@@ -705,7 +705,7 @@ export default function POS() {
             {/* Catalog header: eyebrow + zoom rail */}
             <div className="flex items-center justify-between shrink-0">
               <span className="eyebrow eyebrow-blue">
-                CATÁLOGO · {filtered.length} ÍTEMS
+                {t("pos.catalog", "CATALOG")} · {filtered.length} {t("pos.items", "ITEMS")}
               </span>
               <div className="flex items-center gap-3">
                 {/* Zoom rail */}
@@ -725,7 +725,7 @@ export default function POS() {
                   <Search className="h-3 w-3 ml-1 text-muted-foreground" />
                 </div>
                 <span className="text-[11px] text-muted-foreground hidden sm:block">
-                  Esta sucursal
+                  {t("pos.this_branch", "This branch")}
                 </span>
               </div>
             </div>
@@ -745,7 +745,7 @@ export default function POS() {
         {/* RIGHT: ticket */}
         <TicketPanel
           canCharge={canCharge}
-          reasonDisabled={isPos && !openSession ? "Abre caja para cobrar" : undefined}
+          reasonDisabled={isPos && !openSession ? t("pos.open_drawer_to_charge", "Open drawer to charge") : undefined}
           onCharge={() => setPaymentOpen(true)}
           onSendToTable={channel === "tables" ? handleSendToTable : undefined}
         />

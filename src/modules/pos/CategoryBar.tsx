@@ -1,5 +1,6 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface Category { id: string; name: string; color: string | null }
 
@@ -11,6 +12,8 @@ interface CategoryBarProps {
 }
 
 export function CategoryBar({ categories, active, onChange, productCount }: CategoryBarProps) {
+  const { t } = useI18n();
+
   return (
     <ScrollArea className="w-full shrink-0">
       <div className="flex gap-2 py-1">
@@ -22,7 +25,7 @@ export function CategoryBar({ categories, active, onChange, productCount }: Cate
             active === "all" ? "g-pill-brand" : "g-pill-ghost"
           )}
         >
-          Todos
+          {t("pos.all_categories", "All")}
           {productCount != null && (
             <span className="ml-1 text-[10px] opacity-70">{productCount}</span>
           )}
